@@ -20,6 +20,8 @@ dependencyResolutionManagement {
         mavenCentral()
         //maven { url 'https://maven.ghostscript.com/' }
         maven { url "file://${System.properties['user.home']}/MAVEN" }
+        maven { url 'https://maven.ghostscript.com' }
+
     }
 }
 

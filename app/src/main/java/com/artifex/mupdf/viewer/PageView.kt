@@ -476,22 +476,22 @@ class PageView(
 
         // Render the page in the background
         mDrawEntire = object : CancellableAsyncTask<Void, Boolean>(getUpdatePageTask(mEntireBm, mSize!!.x, mSize!!.y, 0, 0, mSize!!.x, mSize!!.y)) {
-//            override fun onPreExecute() {
-//                setBackgroundColor(BACKGROUND_COLOR)
-//                mEntire?.setImageBitmap(null)
-//                mEntire?.invalidate()
-//
-//                if (mBusyIndicator == null) {
-//                    mBusyIndicator = ProgressBar(mContext).apply {
-//                        isIndeterminate = true
-//                        addView(this)
-//                        visibility = View.INVISIBLE
-//                        mHandler.postDelayed({
-//                            mBusyIndicator?.visibility = View.VISIBLE
-//                        }, PROGRESS_DIALOG_DELAY.toLong())
-//                    }
-//                }
-//            }
+            override fun onPreExecute() {
+                setBackgroundColor(BACKGROUND_COLOR)
+                mEntire?.setImageBitmap(null)
+                mEntire?.invalidate()
+
+                if (mBusyIndicator == null) {
+                    mBusyIndicator = ProgressBar(mContext).apply {
+                        isIndeterminate = true
+                        addView(this)
+                        visibility = View.INVISIBLE
+                        mHandler.postDelayed({
+                            mBusyIndicator?.visibility = View.VISIBLE
+                        }, PROGRESS_DIALOG_DELAY.toLong())
+                    }
+                }
+            }
 
             override fun onPostExecute(result: Boolean) {
                 removeView(mBusyIndicator)

@@ -3,10 +3,11 @@ package com.example.mupdfviewer
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
 import com.artifex.mupdf.viewer.DocumentActivity
 import com.example.mupdfviewer.databinding.LibraryActivityBinding
 
-class LibraryActivity : Activity() {
+class LibraryActivity : AppCompatActivity() {
 
     private val FILE_REQUEST = 42
     private lateinit var binding: LibraryActivityBinding

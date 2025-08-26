@@ -31,14 +31,17 @@ import android.widget.RelativeLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.ViewAnimator
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.artifex.mupdf.fitz.SeekableInputStream
 import com.artifex.mupdf.viewer.ReaderView.Companion.HORIZONTAL_SCROLLING
 import com.example.mupdfviewer.R
+import kotlinx.coroutines.launch
 import java.io.IOException
 import java.util.Locale
 
-class DocumentActivity : Activity() {
+class DocumentActivity : AppCompatActivity() {
 
     private val APP = "MuPDF-chinh"
 
@@ -65,6 +68,8 @@ class DocumentActivity : Activity() {
     private lateinit var mSearchFwd: ImageButton
     private lateinit var mSearchClose: ImageButton
     private lateinit var mSearchText: EditText
+
+    private lateinit var mDownloadPdfToPNGText: ImageButton
 
     private lateinit var mNightModeButton: ImageButton
 
@@ -152,6 +157,22 @@ class DocumentActivity : Activity() {
         } else {
             Log.i(APP, "  Opening document from stream")
             openStream(ContentInputStream(cr, uri, size), mimetype!!)
+        }
+    }
+
+    fun shareCurrentPageAsPNG() {
+        // đảm bảo core và pdfConverter đã khởi tạo
+        if (core == null) return
+
+        lifecycleScope.launch {
+            // lấy trang hiện tại đang hiển thị
+            val pageNum = mDocView.getDisplayedViewIndex()
+            val pngFile = core!!.convertPDFPageToPNG(pageNum = pageNum)
+            pngFile?.let {
+                core!!.saveToDownloads(it) // Chia sẻ
+                // hoặc
+                // pdfConverter.saveToDownloads(it) // Lưu vào Downloads
+            }
         }
     }
 
@@ -379,6 +400,8 @@ class DocumentActivity : Activity() {
         mNightModeButton.setOnClickListener { toggleNightMode() }
 
         mScrollButton.setOnClickListener { onUpdateScrollMode() }
+
+        mDownloadPdfToPNGText.setOnClickListener { shareCurrentPageAsPNG() }
 
         // Search invoking buttons are disabled while there is no text specified
         mSearchBack.isEnabled = false
@@ -676,6 +699,7 @@ class DocumentActivity : Activity() {
         mLayoutButton = mButtonsView.findViewById(R.id.layoutButton)
         mNightModeButton = mButtonsView.findViewById(R.id.btNightMode)
         mScrollButton = mButtonsView.findViewById(R.id.btScroll)
+        mDownloadPdfToPNGText = mButtonsView.findViewById(R.id.btDownload)
         mTopBarSwitcher.visibility = View.INVISIBLE
         mPageNumberView.visibility = View.INVISIBLE
 

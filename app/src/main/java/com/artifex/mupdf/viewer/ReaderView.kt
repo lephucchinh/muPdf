@@ -47,6 +47,8 @@ open class ReaderView @JvmOverloads constructor(
     private var mLastScaleFocusX = 0f
     private var mLastScaleFocusY = 0f
 
+    private var nightMode = false
+
     val mHistory: Stack<Int> = Stack()
 
     init {
@@ -69,6 +71,14 @@ open class ReaderView @JvmOverloads constructor(
         if (tapPageMargin < 100) tapPageMargin = 100
         if (tapPageMargin > dm.widthPixels / 5) tapPageMargin = dm.widthPixels / 5
     }
+
+
+    fun setNightMode(enabled: Boolean) {
+        nightMode = enabled
+        refresh()
+    }
+
+    fun isNightMode() = nightMode
 
     fun popHistory(): Boolean {
         return if (mHistory.empty()) {

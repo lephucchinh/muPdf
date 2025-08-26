@@ -57,6 +57,9 @@ class PageView(
         private const val BOX_COLOR = 0xFF4444FF.toInt()
         private const val BACKGROUND_COLOR = 0xFFFFFFFF.toInt()
         private const val PROGRESS_DIALOG_DELAY = 200
+
+        const val NIGHT_HIGHLIGHT_COLOR = Color.CYAN
+        const val NIGHT_LINK_COLOR = Color.MAGENTA
     }
 
     private var mPageNumber: Int = 0
@@ -85,6 +88,7 @@ class PageView(
 
     private var mBusyIndicator: ProgressBar? = null
     private val mHandler = Handler()
+
 
     init {
         setBackgroundColor(BACKGROUND_COLOR)
@@ -283,8 +287,11 @@ class PageView(
                     val scale = mSourceScale * width.toFloat() / mSize!!.x.toFloat()
                     val paint = Paint()
 
+                    Log.d("onDraw-Pageview", "onDraw: ${mCore.isNightMode()}")
+
                     if (!mIsBlank && mSearchBoxes != null) {
-                        paint.color = HIGHLIGHT_COLOR
+                        paint.color = if (mCore.isNightMode()) NIGHT_HIGHLIGHT_COLOR else HIGHLIGHT_COLOR
+                        paint.alpha = 80
                         mSearchBoxes!!.forEach { searchBox ->
                             searchBox.forEach { q ->
                                 val path = Path().apply {
@@ -300,7 +307,8 @@ class PageView(
                     }
 
                     if (!mIsBlank && mLinks != null && mHighlightLinks) {
-                        paint.color = LINK_COLOR
+                        paint.color = if (mCore.isNightMode()) NIGHT_LINK_COLOR else LINK_COLOR
+                        paint.alpha = 120
                         mLinks!!.forEach { link ->
                             canvas.drawRect(
                                 link.bounds.x0 * scale, link.bounds.y0 * scale,
@@ -308,6 +316,7 @@ class PageView(
                             )
                         }
                     }
+
                 }
             }.also { addView(it) }
         }

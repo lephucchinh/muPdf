@@ -24,6 +24,11 @@ class MuPDFCore private constructor(private var doc: Document?) {
     private var layoutH = 504
     private var layoutEM = 10
 
+    companion object {
+        var nightMode = false
+    }
+
+
     init {
         doc?.let {
             it.layout(layoutW.toFloat(), layoutH.toFloat(), layoutEM.toFloat())
@@ -35,6 +40,12 @@ class MuPDFCore private constructor(private var doc: Document?) {
     constructor(buffer: ByteArray, magic: String) : this(Document.openDocument(buffer, magic))
 
     constructor(stm: SeekableInputStream, magic: String) : this(Document.openDocument(stm, magic))
+
+    fun setNightMode(enabled: Boolean) {
+        nightMode = enabled
+    }
+
+    fun isNightMode() = nightMode
 
     fun getTitle(): String? {
         return doc?.getMetaData(Document.META_INFO_TITLE)
@@ -142,14 +153,48 @@ class MuPDFCore private constructor(private var doc: Document?) {
         val yscale = pageH.toFloat() / (bbox.y1 - bbox.y0)
         ctm.scale(xscale, yscale)
 
+        // Tạo một đối tượng Rect từ các tọa độ patch.
+        // Lời gọi 'run' yêu cầu một Rect để xác định vùng cần vẽ lại.
+        val areaToDraw = Rect(
+            patchX.toFloat(),
+            patchY.toFloat(),
+            (patchX + patchW).toFloat(),
+            (patchY + patchH).toFloat()
+        )
+
         val dev = AndroidDrawDevice(bm, patchX, patchY)
         try {
-            displayList!!.run(dev, ctm, cookie)
+            // Sửa lại lời gọi run() với các tham số theo đúng thứ tự
+            // (Device, Matrix, Rect, Cookie)
+            displayList!!.run(dev, ctm, areaToDraw, cookie)
             dev.close()
         } finally {
             dev.destroy()
         }
+
+        // Xử lý chế độ ban đêm sau khi vẽ xong
+        if (nightMode) {
+            invertBitmap(bm)
+        }
     }
+
+    private fun invertBitmap(bitmap: Bitmap) {
+        val canvas = android.graphics.Canvas(bitmap)
+        val paint = android.graphics.Paint()
+        val matrixInvert = android.graphics.ColorMatrix()
+        matrixInvert.set(
+            floatArrayOf(
+                -1.0f, 0.0f, 0.0f, 0.0f, 255.0f,
+                0.0f, -1.0f, 0.0f, 0.0f, 255.0f,
+                0.0f, 0.0f, -1.0f, 0.0f, 255.0f,
+                0.0f, 0.0f, 0.0f, 1.0f, 0.0f
+            )
+        )
+        val filter = android.graphics.ColorMatrixColorFilter(matrixInvert)
+        paint.colorFilter = filter
+        canvas.drawBitmap(bitmap, 0f, 0f, paint)
+    }
+
 
     @Synchronized
     fun updatePage(

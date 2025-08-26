@@ -63,11 +63,17 @@ class DocumentActivity : Activity() {
     private lateinit var mSearchFwd: ImageButton
     private lateinit var mSearchClose: ImageButton
     private lateinit var mSearchText: EditText
+
+    private lateinit var mNightModeButton: ImageButton
     private lateinit var mSearchTask: SearchTask
     private lateinit var mAlertBuilder: AlertDialog.Builder
     private var mLinkHighlight = false
     private var mFlatOutline: ArrayList<Item>? = null
     private var mReturnToLibraryActivity = false
+
+
+    private var isNightMode = false
+
 
     protected var mDisplayDPI: Int = 0
     private var mLayoutEM = 10
@@ -367,6 +373,8 @@ class DocumentActivity : Activity() {
 
         mSearchClose.setOnClickListener { searchModeOff() }
 
+        mNightModeButton.setOnClickListener { toggleNightMode() }
+
         // Search invoking buttons are disabled while there is no text specified
         mSearchBack.isEnabled = false
         mSearchFwd.isEnabled = false
@@ -652,10 +660,21 @@ class DocumentActivity : Activity() {
         mSearchText = mButtonsView.findViewById(R.id.searchText)
         mLinkButton = mButtonsView.findViewById(R.id.linkButton)
         mLayoutButton = mButtonsView.findViewById(R.id.layoutButton)
+        mNightModeButton = mButtonsView.findViewById(R.id.btNightMode)
         mTopBarSwitcher.visibility = View.INVISIBLE
         mPageNumberView.visibility = View.INVISIBLE
 
         mPageSlider.visibility = View.INVISIBLE
+    }
+
+    private fun toggleNightMode() {
+        if (core == null) return
+        isNightMode = !isNightMode
+        mNightModeButton.setColorFilter(
+            if (isNightMode) Color.YELLOW else Color.WHITE
+        )
+        mDocView.setNightMode(isNightMode)
+        core!!.setNightMode(isNightMode)
     }
 
     private fun showKeyboard() {

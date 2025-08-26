@@ -42,7 +42,7 @@
 				android:layout_height="24dp"
 				android:background="@drawable/button"
 				android:layout_gravity="center"
-				android:src="@drawable/ic_scroll_horizontal"
+				android:src="@drawable/ic_scroll_vertical"
 				/>
 
 			<ImageButton

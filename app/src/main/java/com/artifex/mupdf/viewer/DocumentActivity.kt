@@ -295,7 +295,6 @@ class DocumentActivity : Activity() {
 
     fun createUI(savedInstanceState: Bundle?) {
         if (core == null) return
-
         // Now create the UI.
         // First create the document view
         mDocView = object : ReaderView(this@DocumentActivity) {

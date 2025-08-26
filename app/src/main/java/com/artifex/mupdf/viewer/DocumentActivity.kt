@@ -370,6 +370,7 @@ class DocumentActivity : AppCompatActivity() {
         // controls in variables
         makeButtonsView()
 
+        updateStateScrollButton()
         // Set up the page slider
         val smax = Math.max(core!!.countPages() - 1, 1)
         mPageSliderRes = ((10 + smax - 1) / smax) * 2
@@ -507,6 +508,10 @@ class DocumentActivity : AppCompatActivity() {
 
     fun onUpdateScrollMode() {
         mDocView.setScrollMode()
+        updateStateScrollButton()
+    }
+
+    fun updateStateScrollButton() {
         if(HORIZONTAL_SCROLLING ) {
             mScrollButton.setImageResource(R.drawable.ic_scroll_vertical)
         } else {

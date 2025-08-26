@@ -72,6 +72,11 @@ open class ReaderView @JvmOverloads constructor(
         if (tapPageMargin > dm.widthPixels / 5) tapPageMargin = dm.widthPixels / 5
     }
 
+    fun setScrollMode() {
+        HORIZONTAL_SCROLLING = HORIZONTAL_SCROLLING.not()
+        refresh()
+    }
+
 
     fun setNightMode(enabled: Boolean) {
         nightMode = enabled
@@ -822,7 +827,11 @@ open class ReaderView @JvmOverloads constructor(
         private const val MIN_SCALE = 1.0f
         private const val MAX_SCALE = 64.0f
 
-        private const val HORIZONTAL_SCROLLING = true
+        @JvmStatic
+        var HORIZONTAL_SCROLLING = true
+
+        @JvmStatic
+        var PAGE_SCROLLING = false
 
         private fun directionOfTravel(vx: Float, vy: Float): Int {
             return when {

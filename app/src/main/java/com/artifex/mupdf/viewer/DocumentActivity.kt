@@ -32,6 +32,7 @@ import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.ViewAnimator
 import com.artifex.mupdf.fitz.SeekableInputStream
+import com.artifex.mupdf.viewer.ReaderView.Companion.HORIZONTAL_SCROLLING
 import com.example.mupdfviewer.R
 import java.io.IOException
 import java.util.Locale
@@ -65,6 +66,8 @@ class DocumentActivity : Activity() {
     private lateinit var mSearchText: EditText
 
     private lateinit var mNightModeButton: ImageButton
+
+    private lateinit var mScrollButton: ImageButton
     private lateinit var mSearchTask: SearchTask
     private lateinit var mAlertBuilder: AlertDialog.Builder
     private var mLinkHighlight = false
@@ -375,6 +378,8 @@ class DocumentActivity : Activity() {
 
         mNightModeButton.setOnClickListener { toggleNightMode() }
 
+        mScrollButton.setOnClickListener { onUpdateScrollMode() }
+
         // Search invoking buttons are disabled while there is no text specified
         mSearchBack.isEnabled = false
         mSearchFwd.isEnabled = false
@@ -475,6 +480,15 @@ class DocumentActivity : Activity() {
         layout.addView(mDocView)
         layout.addView(mButtonsView)
         setContentView(layout)
+    }
+
+    fun onUpdateScrollMode() {
+        mDocView.setScrollMode()
+        if(HORIZONTAL_SCROLLING ) {
+            mScrollButton.setImageResource(R.drawable.ic_scroll_vertical)
+        } else {
+            mScrollButton.setImageResource(R.drawable.ic_scroll_horizontal)
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -661,6 +675,7 @@ class DocumentActivity : Activity() {
         mLinkButton = mButtonsView.findViewById(R.id.linkButton)
         mLayoutButton = mButtonsView.findViewById(R.id.layoutButton)
         mNightModeButton = mButtonsView.findViewById(R.id.btNightMode)
+        mScrollButton = mButtonsView.findViewById(R.id.btScroll)
         mTopBarSwitcher.visibility = View.INVISIBLE
         mPageNumberView.visibility = View.INVISIBLE
 

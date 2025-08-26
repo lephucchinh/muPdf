@@ -37,6 +37,15 @@
 				/>
 
 			<ImageButton
+				android:id="@+id/btScroll"
+				android:layout_width="24dp"
+				android:layout_height="24dp"
+				android:background="@drawable/button"
+				android:layout_gravity="center"
+				android:src="@drawable/ic_scroll_horizontal"
+				/>
+
+			<ImageButton
 				android:id="@+id/btNightMode"
 				android:layout_width="24dp"
 				android:layout_height="24dp"

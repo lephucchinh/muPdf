@@ -31,6 +31,7 @@ import android.widget.RelativeLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.ViewAnimator
+import androidx.core.content.ContextCompat
 import com.artifex.mupdf.fitz.SeekableInputStream
 import com.artifex.mupdf.viewer.ReaderView.Companion.HORIZONTAL_SCROLLING
 import com.example.mupdfviewer.R
@@ -39,7 +40,7 @@ import java.util.Locale
 
 class DocumentActivity : Activity() {
 
-    private val APP = "MuPDF"
+    private val APP = "MuPDF-chinh"
 
     private enum class TopBarMode { Main, Search, More }
 
@@ -227,7 +228,7 @@ class DocumentActivity : Activity() {
                 }
 
                 Log.i(APP, "  NAME $mDocTitle")
-                Log.i(APP, "  SIZE $size")
+                Log.i(APP, "  NAME $size")
 
                 if (mimetype == null || mimetype == "application/octet-stream") {
                     mimetype = contentResolver.getType(uri)
@@ -354,7 +355,7 @@ class DocumentActivity : Activity() {
 
         // Set the file-name text
         val docTitle = core!!.getTitle()
-        if (docTitle != null) mDocNameView.text = docTitle else mDocNameView.text = mDocTitle
+        if (docTitle.isNullOrBlank()) mDocNameView.text = docTitle else mDocNameView.text = mDocTitle
 
         // Activate the seekbar
         mPageSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {

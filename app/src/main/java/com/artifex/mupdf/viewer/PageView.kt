@@ -22,6 +22,7 @@ import android.os.Handler
 import android.os.FileUriExposedException
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -88,6 +89,10 @@ class PageView(
 
     private var mBusyIndicator: ProgressBar? = null
     private val mHandler = Handler()
+    
+    // Drawing layer
+    private var mDrawingLayer: DrawingLayer? = null
+    private var mIsDrawingMode = false
 
 
     init {
@@ -228,6 +233,11 @@ class PageView(
                 scaleType = ImageView.ScaleType.MATRIX
                 addView(this)
             }
+        }
+        
+        // Initialize drawing layer if not already done
+        if (mDrawingLayer == null) {
+            mDrawingLayer = DrawingLayer(this)
         }
 
         mEntire?.setImageBitmap(null)
@@ -608,5 +618,73 @@ class PageView(
         } catch (e: RuntimeException) {
             null
         }
+    }
+    
+    // Drawing methods
+    fun enableDrawingMode(enable: Boolean) {
+        mIsDrawingMode = enable
+        mDrawingLayer?.isDrawingEnabled = enable
+    }
+    
+    fun isDrawingModeEnabled(): Boolean = mIsDrawingMode
+    
+    fun setDrawingTool(tool: DrawingTool) {
+        mDrawingLayer?.setTool(tool)
+    }
+    
+    fun setDrawingColor(color: Int) {
+        mDrawingLayer?.setColor(color)
+    }
+    
+    fun setDrawingStrokeWidth(width: Float) {
+        mDrawingLayer?.setStrokeWidth(width)
+    }
+    
+    fun undoDrawing() = mDrawingLayer?.undo() ?: false
+    
+    fun redoDrawing() = mDrawingLayer?.redo() ?: false
+    
+    fun clearDrawing() {
+        mDrawingLayer?.clear()
+    }
+    
+    fun hasDrawing(): Boolean = mDrawingLayer?.hasStrokes() ?: false
+    
+    fun canUndoDrawing(): Boolean = mDrawingLayer?.canUndo() ?: false
+    
+    fun canRedoDrawing(): Boolean = mDrawingLayer?.canRedo() ?: false
+    
+    fun getDrawingStrokes() = mDrawingLayer?.getStrokes() ?: emptyList()
+    
+    fun setDrawingStrokes(strokes: List<DrawingStroke>) {
+        mDrawingLayer?.setStrokes(strokes)
+    }
+    
+    fun showDrawing(show: Boolean) {
+        mDrawingLayer?.isVisible = show
+        invalidate()
+    }
+    
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        
+        // Draw the drawing layer on top of everything
+        if (mIsDrawingMode && mDrawingLayer != null) {
+            mDrawingLayer!!.draw(canvas)
+        }
+    }
+    
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (mIsDrawingMode && mDrawingLayer?.onTouchEvent(event) == true) {
+            return true
+        }
+        return super.onTouchEvent(event)
+    }
+    
+    override fun onInterceptTouchEvent(ev: MotionEvent?): Boolean {
+        if (mIsDrawingMode && ev != null && mDrawingLayer?.onTouchEvent(ev) == true) {
+            return true
+        }
+        return super.onInterceptTouchEvent(ev)
     }
 }

@@ -55,6 +55,15 @@
 				android:layout_gravity="center"
 				android:src="@drawable/ic_scroll_vertical"
 				/>
+			<ImageButton
+				android:id="@+id/btPen"
+				android:layout_width="24dp"
+				android:layout_height="24dp"
+				android:layout_marginHorizontal="10dp"
+				android:background="@drawable/button"
+				android:layout_gravity="center"
+				android:src="@drawable/ic_pen"
+				/>
 
 			<ImageButton
 				android:id="@+id/btNightMode"

@@ -79,6 +79,11 @@ class DocumentActivity : AppCompatActivity() {
     private var mLinkHighlight = false
     private var mFlatOutline: ArrayList<Item>? = null
     private var mReturnToLibraryActivity = false
+    
+    // Drawing components
+    private lateinit var mDrawingButton: ImageButton
+    private var mDrawingToolbar: DrawingToolbar? = null
+    private var mIsDrawingMode = false
 
 
     private var isNightMode = false
@@ -403,6 +408,7 @@ class DocumentActivity : AppCompatActivity() {
         mScrollButton.setOnClickListener { onUpdateScrollMode() }
 
         mDownloadPdfToPNGText.setOnClickListener { shareCurrentPageAsPNG() }
+        mDrawingButton.setOnClickListener { toggleDrawingMode() }
 
         // Search invoking buttons are disabled while there is no text specified
         mSearchBack.isEnabled = false
@@ -705,6 +711,7 @@ class DocumentActivity : AppCompatActivity() {
         mNightModeButton = mButtonsView.findViewById(R.id.btNightMode)
         mScrollButton = mButtonsView.findViewById(R.id.btScroll)
         mDownloadPdfToPNGText = mButtonsView.findViewById(R.id.btDownload)
+        mDrawingButton = mButtonsView.findViewById(R.id.btPen)
         mTopBarSwitcher.visibility = View.INVISIBLE
         mPageNumberView.visibility = View.INVISIBLE
 
@@ -719,6 +726,74 @@ class DocumentActivity : AppCompatActivity() {
         )
         mDocView.setNightMode(isNightMode)
         core!!.setNightMode(isNightMode)
+    }
+    
+    private fun toggleDrawingMode() {
+        mIsDrawingMode = !mIsDrawingMode
+        updateDrawingButtonState()
+        
+        if (mIsDrawingMode) {
+            showDrawingToolbar()
+        } else {
+            hideDrawingToolbar()
+        }
+    }
+    
+    private fun initializeDrawingToolbar() {
+        if (mDrawingToolbar == null) {
+            mDrawingToolbar = DrawingToolbar(this).apply {
+                setOnDrawingModeChangedListener { enabled ->
+                    mIsDrawingMode = enabled
+                    updateDrawingButtonState()
+                }
+            }
+        }
+    }
+    
+    private fun updateDrawingButtonState() {
+        mDrawingButton.setColorFilter(
+            if (mIsDrawingMode) Color.RED else Color.WHITE
+        )
+    }
+    
+    private fun showDrawingToolbar() {
+        // Initialize drawing toolbar if needed
+        initializeDrawingToolbar()
+        
+        // Show drawing toolbar as a popup
+        val popup = android.widget.PopupWindow(mDrawingToolbar!!, 
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
+        
+        popup.isOutsideTouchable = true
+        popup.isFocusable = true
+        
+        // Position the popup at the top of the screen
+        val location = IntArray(2)
+        mDrawingButton.getLocationInWindow(location)
+        popup.showAsDropDown(mDrawingButton, 0, 10)
+        
+        // Enable drawing mode on current page
+        val currentPageView = mDocView.getDisplayedView()
+        if (currentPageView is PageView) {
+            currentPageView.enableDrawingMode(true)
+            mDrawingToolbar!!.setPageView(currentPageView)
+        }
+        
+        // Store popup reference for later dismissal
+        mDrawingToolbar!!.tag = popup
+    }
+    
+    private fun hideDrawingToolbar() {
+        // Dismiss popup if exists
+        val popup = mDrawingToolbar?.tag as? android.widget.PopupWindow
+        popup?.dismiss()
+        
+        // Disable drawing mode on current page
+        val currentPageView = mDocView.getDisplayedView()
+        if (currentPageView is PageView) {
+            currentPageView.enableDrawingMode(false)
+        }
     }
 
     private fun showKeyboard() {

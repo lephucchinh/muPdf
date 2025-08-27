@@ -1,6 +1,7 @@
 package com.artifex.mupdf.viewer
 
 import android.graphics.*
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import kotlin.math.abs
@@ -96,22 +97,29 @@ class DrawingLayer(private val view: View) {
     }
     
     fun onTouchEvent(event: MotionEvent): Boolean {
-        if (!isDrawingEnabled || !isVisible) return false
+        if (!isDrawingEnabled || !isVisible) {
+            Log.d("DrawingLayer", "Drawing disabled: enabled=$isDrawingEnabled, visible=$isVisible")
+            return false
+        }
         
         val x = event.x
         val y = event.y
         val pressure = event.pressure
+        Log.d("DrawingLayer", "Touch event: action=${event.action}, x=$x, y=$y, pressure=$pressure")
         
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
+                Log.d("DrawingLayer", "Starting stroke")
                 startStroke(x, y, pressure)
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
+                Log.d("DrawingLayer", "Adding point to stroke")
                 addPointToStroke(x, y, pressure)
                 return true
             }
             MotionEvent.ACTION_UP -> {
+                Log.d("DrawingLayer", "Ending stroke")
                 endStroke()
                 return true
             }
@@ -174,7 +182,12 @@ class DrawingLayer(private val view: View) {
     }
     
     fun draw(canvas: Canvas) {
-        if (!isVisible) return
+        if (!isVisible) {
+            Log.d("DrawingLayer", "Drawing layer not visible")
+            return
+        }
+        
+        Log.d("DrawingLayer", "Drawing ${strokes.size} completed strokes and ${if (currentStroke != null) 1 else 0} current stroke")
         
         // Draw completed strokes
         for (stroke in strokes) {

@@ -239,6 +239,8 @@ class PageView(
         if (mDrawingLayer == null) {
             mDrawingLayer = DrawingLayer(this)
         }
+        
+        // Initialize drawing layer if not already done
 
         mEntire?.setImageBitmap(null)
         mEntire?.invalidate()
@@ -622,8 +624,10 @@ class PageView(
     
     // Drawing methods
     fun enableDrawingMode(enable: Boolean) {
+        Log.d("PageView", "enableDrawingMode: $enable")
         mIsDrawingMode = enable
         mDrawingLayer?.isDrawingEnabled = enable
+        Log.d("PageView", "Drawing mode set: $mIsDrawingMode, layer enabled: ${mDrawingLayer?.isDrawingEnabled}")
     }
     
     fun isDrawingModeEnabled(): Boolean = mIsDrawingMode
@@ -665,24 +669,31 @@ class PageView(
         invalidate()
     }
     
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
+    override fun dispatchDraw(canvas: Canvas) {
+        super.dispatchDraw(canvas)
         
         // Draw the drawing layer on top of everything
         if (mIsDrawingMode && mDrawingLayer != null) {
+            Log.d("PageView", "Drawing layer on canvas")
             mDrawingLayer!!.draw(canvas)
+        } else {
+            Log.d("PageView", "Not drawing: mode=$mIsDrawingMode, layer=${mDrawingLayer != null}")
         }
     }
     
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        Log.d("PageView", "onTouchEvent: action=${event.action}, mode=$mIsDrawingMode")
         if (mIsDrawingMode && mDrawingLayer?.onTouchEvent(event) == true) {
+            Log.d("PageView", "Drawing handled touch event")
             return true
         }
         return super.onTouchEvent(event)
     }
     
     override fun onInterceptTouchEvent(ev: MotionEvent?): Boolean {
+        Log.d("PageView", "onInterceptTouchEvent: action=${ev?.action}, mode=$mIsDrawingMode")
         if (mIsDrawingMode && ev != null && mDrawingLayer?.onTouchEvent(ev) == true) {
+            Log.d("PageView", "Drawing intercepted touch event")
             return true
         }
         return super.onInterceptTouchEvent(ev)

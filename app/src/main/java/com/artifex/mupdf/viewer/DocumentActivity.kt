@@ -729,12 +729,15 @@ class DocumentActivity : AppCompatActivity() {
     }
     
     private fun toggleDrawingMode() {
+        Log.d("DocumentActivity", "toggleDrawingMode called, current mode: $mIsDrawingMode")
         mIsDrawingMode = !mIsDrawingMode
         updateDrawingButtonState()
         
         if (mIsDrawingMode) {
+            Log.d("DocumentActivity", "Showing drawing toolbar")
             showDrawingToolbar()
         } else {
+            Log.d("DocumentActivity", "Hiding drawing toolbar")
             hideDrawingToolbar()
         }
     }
@@ -757,6 +760,7 @@ class DocumentActivity : AppCompatActivity() {
     }
     
     private fun showDrawingToolbar() {
+        Log.d("DocumentActivity", "showDrawingToolbar called")
         // Initialize drawing toolbar if needed
         initializeDrawingToolbar()
         
@@ -775,9 +779,13 @@ class DocumentActivity : AppCompatActivity() {
         
         // Enable drawing mode on current page
         val currentPageView = mDocView.getDisplayedView()
+        Log.d("DocumentActivity", "Current page view: ${currentPageView?.javaClass?.simpleName}")
         if (currentPageView is PageView) {
+            Log.d("DocumentActivity", "Enabling drawing mode on PageView")
             currentPageView.enableDrawingMode(true)
             mDrawingToolbar!!.setPageView(currentPageView)
+        } else {
+            Log.e("DocumentActivity", "Current page view is not PageView: ${currentPageView?.javaClass?.simpleName}")
         }
         
         // Store popup reference for later dismissal

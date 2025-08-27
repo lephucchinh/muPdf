@@ -17,9 +17,6 @@ class DrawingView @JvmOverloads constructor(
     private val drawingLayer = DrawingLayer(this)
 
     // Drawing toolbar state
-    companion object {
-
-    }
     var isDrawingMode = false
         set(value) {
             field = value

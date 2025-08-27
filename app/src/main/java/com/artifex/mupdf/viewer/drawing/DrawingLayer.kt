@@ -1,10 +1,9 @@
-package com.artifex.mupdf.viewer
+package com.artifex.mupdf.viewer.drawing
 
 import android.graphics.*
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
-import kotlin.math.abs
 
 data class DrawingPoint(
     val x: Float,
@@ -29,29 +28,28 @@ enum class DrawingTool {
 }
 
 class DrawingLayer(private val view: View) {
-    
     private val strokes = mutableListOf<DrawingStroke>()
     private val redoStrokes = mutableListOf<DrawingStroke>()
-    
+
     private var currentStroke: DrawingStroke? = null
     var currentTool = DrawingTool.PEN
     var currentColor = Color.RED
     var currentStrokeWidth = 3.0f
-    
+
     private val paint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.STROKE
         strokeJoin = Paint.Join.ROUND
         strokeCap = Paint.Cap.ROUND
     }
-    
+
     private val path = Path()
     private val tempPath = Path()
-    
+
     // Drawing settings
     var isDrawingEnabled = true
     var isVisible = true
-    
+
     fun setTool(tool: DrawingTool) {
         currentTool = tool
         when (tool) {
@@ -85,28 +83,28 @@ class DrawingLayer(private val view: View) {
             }
         }
     }
-    
+
     fun setColor(color: Int) {
         currentColor = color
         paint.color = color
     }
-    
+
     fun setStrokeWidth(width: Float) {
         currentStrokeWidth = width
         paint.strokeWidth = width
     }
-    
+
     fun onTouchEvent(event: MotionEvent): Boolean {
         if (!isDrawingEnabled || !isVisible) {
             Log.d("DrawingLayer", "Drawing disabled: enabled=$isDrawingEnabled, visible=$isVisible")
             return false
         }
-        
+
         val x = event.x
         val y = event.y
         val pressure = event.pressure
         Log.d("DrawingLayer", "Touch event: action=${event.action}, x=$x, y=$y, pressure=$pressure")
-        
+
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 Log.d("DrawingLayer", "Starting stroke")
@@ -126,7 +124,7 @@ class DrawingLayer(private val view: View) {
         }
         return false
     }
-    
+
     private fun startStroke(x: Float, y: Float, pressure: Float) {
         currentStroke = DrawingStroke(
             color = currentColor,
@@ -139,26 +137,26 @@ class DrawingLayer(private val view: View) {
                 DrawingTool.TEXT -> StrokeStyle.SOLID
             }
         )
-        
+
         currentStroke?.points?.add(DrawingPoint(x, y, pressure))
         path.reset()
         path.moveTo(x, y)
-        
+
         // Clear redo stack when new stroke starts
         redoStrokes.clear()
     }
-    
+
     private fun addPointToStroke(x: Float, y: Float, pressure: Float) {
         currentStroke?.let { stroke ->
             stroke.points.add(DrawingPoint(x, y, pressure))
-            
+
             // Smooth the path for better drawing
             if (stroke.points.size >= 3) {
                 val lastIndex = stroke.points.size - 1
                 val prevPoint = stroke.points[lastIndex - 2]
                 val currentPoint = stroke.points[lastIndex - 1]
                 val nextPoint = stroke.points[lastIndex]
-                
+
                 // Use quadratic bezier for smooth curves
                 val controlX = (currentPoint.x + nextPoint.x) / 2
                 val controlY = (currentPoint.y + nextPoint.y) / 2
@@ -169,7 +167,7 @@ class DrawingLayer(private val view: View) {
         }
         view.invalidate()
     }
-    
+
     private fun endStroke() {
         currentStroke?.let { stroke ->
             if (stroke.points.size > 1) {
@@ -180,30 +178,30 @@ class DrawingLayer(private val view: View) {
         currentStroke = null
         path.reset()
     }
-    
+
     fun draw(canvas: Canvas) {
         if (!isVisible) {
             Log.d("DrawingLayer", "Drawing layer not visible")
             return
         }
-        
+
         Log.d("DrawingLayer", "Drawing ${strokes.size} completed strokes and ${if (currentStroke != null) 1 else 0} current stroke")
-        
+
         // Draw completed strokes
         for (stroke in strokes) {
             drawStroke(canvas, stroke)
         }
-        
+
         // Draw current stroke
         currentStroke?.let { stroke ->
             drawStroke(canvas, stroke, path)
         }
     }
-    
+
     private fun drawStroke(canvas: Canvas, stroke: DrawingStroke, customPath: Path? = null) {
         paint.color = stroke.color
         paint.strokeWidth = stroke.strokeWidth
-        
+
         when (stroke.strokeStyle) {
             StrokeStyle.SOLID -> {
                 paint.pathEffect = null
@@ -215,7 +213,7 @@ class DrawingLayer(private val view: View) {
                 paint.pathEffect = DashPathEffect(floatArrayOf(5f, 5f), 0f)
             }
         }
-        
+
         if (customPath != null) {
             canvas.drawPath(customPath, paint)
         } else {
@@ -231,7 +229,7 @@ class DrawingLayer(private val view: View) {
             canvas.drawPath(tempPath, paint)
         }
     }
-    
+
     fun undo(): Boolean {
         if (strokes.isNotEmpty()) {
             val lastStroke = strokes.removeAt(strokes.size - 1)
@@ -241,7 +239,7 @@ class DrawingLayer(private val view: View) {
         }
         return false
     }
-    
+
     fun redo(): Boolean {
         if (redoStrokes.isNotEmpty()) {
             val stroke = redoStrokes.removeAt(redoStrokes.size - 1)
@@ -251,7 +249,7 @@ class DrawingLayer(private val view: View) {
         }
         return false
     }
-    
+
     fun clear() {
         strokes.clear()
         redoStrokes.clear()
@@ -259,19 +257,21 @@ class DrawingLayer(private val view: View) {
         path.reset()
         view.invalidate()
     }
-    
+
     fun getStrokes(): List<DrawingStroke> = strokes.toList()
-    
+
     fun setStrokes(newStrokes: List<DrawingStroke>) {
         strokes.clear()
         strokes.addAll(newStrokes)
         redoStrokes.clear()
         view.invalidate()
     }
-    
+
     fun hasStrokes(): Boolean = strokes.isNotEmpty() || currentStroke != null
-    
+
     fun canUndo(): Boolean = strokes.isNotEmpty()
-    
+
     fun canRedo(): Boolean = redoStrokes.isNotEmpty()
 }
+
+

@@ -17,6 +17,7 @@ import android.util.DisplayMetrics
 import android.util.Log
 import android.view.KeyEvent
 import android.view.Menu
+import android.view.MotionEvent
 import android.view.View
 import android.view.Window
 import android.view.WindowManager
@@ -33,10 +34,12 @@ import android.widget.TextView
 import android.widget.ViewAnimator
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.artifex.mupdf.fitz.SeekableInputStream
 import com.artifex.mupdf.viewer.ReaderView.Companion.HORIZONTAL_SCROLLING
 import com.example.mupdfviewer.R
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.util.Locale
@@ -74,6 +77,8 @@ class DocumentActivity : AppCompatActivity() {
     private lateinit var mNightModeButton: ImageButton
 
     private lateinit var mScrollButton: ImageButton
+
+    private lateinit var mCloseDrawButton: FloatingActionButton
     private lateinit var mSearchTask: SearchTask
     private lateinit var mAlertBuilder: AlertDialog.Builder
     private var mLinkHighlight = false
@@ -82,7 +87,7 @@ class DocumentActivity : AppCompatActivity() {
     
     // Drawing components
     private lateinit var mDrawingButton: ImageButton
-    private var mDrawingToolbar: DrawingToolbar? = null
+    private var mDrawingToolbar: com.artifex.mupdf.viewer.drawing.DrawingToolbar? = null
     private var mIsDrawingMode = false
 
 
@@ -346,6 +351,22 @@ class DocumentActivity : AppCompatActivity() {
                 hideButtons()
             }
 
+            override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
+                if (mIsDrawingMode == true) {
+                    // không cho intercept để lật page
+                    return false
+                }
+                return super.onInterceptTouchEvent(ev)
+            }
+
+            override fun onTouchEvent(ev: MotionEvent): Boolean {
+                if (mIsDrawingMode == true) {
+                    // bỏ qua swipe lật trang
+                    return false
+                }
+                return super.onTouchEvent(ev)
+            }
+
             override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
                 if (core!!.isReflowable()) {
                     mLayoutW = w * 72 / mDisplayDPI
@@ -406,6 +427,8 @@ class DocumentActivity : AppCompatActivity() {
         mNightModeButton.setOnClickListener { toggleNightMode() }
 
         mScrollButton.setOnClickListener { onUpdateScrollMode() }
+
+        mCloseDrawButton.setOnClickListener {  }
 
         mDownloadPdfToPNGText.setOnClickListener { shareCurrentPageAsPNG() }
         mDrawingButton.setOnClickListener { toggleDrawingMode() }
@@ -710,6 +733,7 @@ class DocumentActivity : AppCompatActivity() {
         mLayoutButton = mButtonsView.findViewById(R.id.layoutButton)
         mNightModeButton = mButtonsView.findViewById(R.id.btNightMode)
         mScrollButton = mButtonsView.findViewById(R.id.btScroll)
+        mCloseDrawButton = mButtonsView.findViewById(R.id.btClose)
         mDownloadPdfToPNGText = mButtonsView.findViewById(R.id.btDownload)
         mDrawingButton = mButtonsView.findViewById(R.id.btPen)
         mTopBarSwitcher.visibility = View.INVISIBLE
@@ -744,7 +768,7 @@ class DocumentActivity : AppCompatActivity() {
     
     private fun initializeDrawingToolbar() {
         if (mDrawingToolbar == null) {
-            mDrawingToolbar = DrawingToolbar(this).apply {
+            mDrawingToolbar = com.artifex.mupdf.viewer.drawing.DrawingToolbar(this).apply {
                 setOnDrawingModeChangedListener { enabled ->
                     mIsDrawingMode = enabled
                     updateDrawingButtonState()
@@ -752,8 +776,9 @@ class DocumentActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     private fun updateDrawingButtonState() {
+        mCloseDrawButton.isVisible = mIsDrawingMode
         mDrawingButton.setColorFilter(
             if (mIsDrawingMode) Color.RED else Color.WHITE
         )

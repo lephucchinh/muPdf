@@ -61,6 +61,9 @@ class PageView(
 
         const val NIGHT_HIGHLIGHT_COLOR = Color.CYAN
         const val NIGHT_LINK_COLOR = Color.MAGENTA
+
+        var mIsDrawingMode = false
+
     }
 
     private var mPageNumber: Int = 0
@@ -91,8 +94,7 @@ class PageView(
     private val mHandler = Handler()
     
     // Drawing layer
-    private var mDrawingLayer: DrawingLayer? = null
-    private var mIsDrawingMode = false
+    private var mDrawingLayer: com.artifex.mupdf.viewer.drawing.DrawingLayer? = null
 
 
     init {
@@ -237,7 +239,7 @@ class PageView(
         
         // Initialize drawing layer if not already done
         if (mDrawingLayer == null) {
-            mDrawingLayer = DrawingLayer(this)
+            mDrawingLayer = com.artifex.mupdf.viewer.drawing.DrawingLayer(this)
         }
         
         // Initialize drawing layer if not already done
@@ -632,7 +634,7 @@ class PageView(
     
     fun isDrawingModeEnabled(): Boolean = mIsDrawingMode
     
-    fun setDrawingTool(tool: DrawingTool) {
+    fun setDrawingTool(tool: com.artifex.mupdf.viewer.drawing.DrawingTool) {
         mDrawingLayer?.setTool(tool)
     }
     
@@ -660,7 +662,7 @@ class PageView(
     
     fun getDrawingStrokes() = mDrawingLayer?.getStrokes() ?: emptyList()
     
-    fun setDrawingStrokes(strokes: List<DrawingStroke>) {
+    fun setDrawingStrokes(strokes: List<com.artifex.mupdf.viewer.drawing.DrawingStroke>) {
         mDrawingLayer?.setStrokes(strokes)
     }
     
@@ -692,7 +694,7 @@ class PageView(
     
     override fun onInterceptTouchEvent(ev: MotionEvent?): Boolean {
         Log.d("PageView", "onInterceptTouchEvent: action=${ev?.action}, mode=$mIsDrawingMode")
-        if (mIsDrawingMode && ev != null && mDrawingLayer?.onTouchEvent(ev) == true) {
+        if (mIsDrawingMode && ev != null/* && mDrawingLayer?.onTouchEvent(ev) == true*/) {
             Log.d("PageView", "Drawing intercepted touch event")
             return true
         }

@@ -673,13 +673,13 @@ class PageView(
     
     override fun dispatchDraw(canvas: Canvas) {
         super.dispatchDraw(canvas)
-        
-        // Draw the drawing layer on top of everything
-        if (mIsDrawingMode && mDrawingLayer != null) {
+
+        // Luôn vẽ drawing layer nếu có stroke (đã lưu hoặc đang vẽ)
+        if (mDrawingLayer != null && mDrawingLayer!!.hasStrokes()) {
             Log.d("PageView", "Drawing layer on canvas")
             mDrawingLayer!!.draw(canvas)
         } else {
-            Log.d("PageView", "Not drawing: mode=$mIsDrawingMode, layer=${mDrawingLayer != null}")
+            Log.d("PageView", "Not drawing: layer=${mDrawingLayer != null}")
         }
     }
     

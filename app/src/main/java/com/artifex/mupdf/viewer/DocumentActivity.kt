@@ -436,6 +436,7 @@ class DocumentActivity : AppCompatActivity() {
             val currentPageView = mDocView.getDisplayedView()
             if (currentPageView is PageView) {
                 val pageNum = mDocView.getDisplayedViewIndex()
+                // NHẤN Close mới thực sự lưu strokes
                 savedDrawingStrokes[pageNum] = currentPageView.getDrawingStrokes() // Lưu nét vẽ
             }
             toggleDrawingMode() // chuyển về chế độ thường
@@ -769,10 +770,10 @@ class DocumentActivity : AppCompatActivity() {
         updateDrawingButtonState()
 
         val currentPageView = mDocView.getDisplayedView()
+        val pageNum = mDocView.getDisplayedViewIndex()
         if (mIsDrawingMode) {
-            // Bắt đầu chế độ vẽ
+            // Vào chế độ vẽ, chỉ hiển thị strokes nếu đã lưu
             if (currentPageView is PageView) {
-                val pageNum = mDocView.getDisplayedViewIndex()
                 if (savedDrawingStrokes.containsKey(pageNum)) {
                     currentPageView.setDrawingStrokes(savedDrawingStrokes[pageNum]!!)
                 } else {
@@ -785,8 +786,12 @@ class DocumentActivity : AppCompatActivity() {
             Log.d("DocumentActivity", "Showing drawing toolbar")
             showDrawingToolbar()
         } else {
-            // Thoát chế độ vẽ: không làm gì với nét vẽ, chỉ tắt drawing mode
+            // Thoát chế độ vẽ: nếu KHÔNG click Close thì sẽ clear strokes (không lưu)
             if (currentPageView is PageView) {
+                // Không lưu lại, clear luôn khi chuyển mode draw
+                if (!savedDrawingStrokes.containsKey(pageNum)) {
+                    currentPageView.clearDrawing()
+                }
                 currentPageView.enableDrawingMode(false)
             }
             Log.d("DocumentActivity", "Hiding drawing toolbar")

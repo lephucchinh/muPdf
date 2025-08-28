@@ -88,7 +88,7 @@ class DocumentActivity : AppCompatActivity() {
     private var mLinkHighlight = false
     private var mFlatOutline: ArrayList<Item>? = null
     private var mReturnToLibraryActivity = false
-    
+
     // Drawing components
     private lateinit var mDrawingButton: ImageButton
     private var mDrawingToolbar: com.artifex.mupdf.viewer.drawing.DrawingToolbar? = null
@@ -193,8 +193,17 @@ class DocumentActivity : AppCompatActivity() {
     private fun showCannotOpenDialog(reason: String) {
         val res = resources
         val alert = mAlertBuilder.create()
-        setTitle(String.format(Locale.ROOT, res.getString(R.string.cannot_open_document_Reason), reason))
-        alert.setButton(AlertDialog.BUTTON_POSITIVE, getString(R.string.dismiss)) { _, _ -> finish() }
+        setTitle(
+            String.format(
+                Locale.ROOT,
+                res.getString(R.string.cannot_open_document_Reason),
+                reason
+            )
+        )
+        alert.setButton(
+            AlertDialog.BUTTON_POSITIVE,
+            getString(R.string.dismiss)
+        ) { _, _ -> finish() }
         alert.show()
     }
 
@@ -220,7 +229,8 @@ class DocumentActivity : AppCompatActivity() {
             val intent = intent
             val file: SeekableInputStream?
 
-            mReturnToLibraryActivity = intent.getIntExtra("$packageName.ReturnToLibraryActivity", 0) != 0
+            mReturnToLibraryActivity =
+                intent.getIntExtra("$packageName.ReturnToLibraryActivity", 0) != 0
 
             if (Intent.ACTION_VIEW == intent.action) {
                 val uri = intent.data
@@ -293,7 +303,10 @@ class DocumentActivity : AppCompatActivity() {
         if (core == null) {
             val alert = mAlertBuilder.create()
             alert.setTitle(R.string.cannot_open_document)
-            alert.setButton(AlertDialog.BUTTON_POSITIVE, getString(R.string.dismiss)) { _, _ -> finish() }
+            alert.setButton(
+                AlertDialog.BUTTON_POSITIVE,
+                getString(R.string.dismiss)
+            ) { _, _ -> finish() }
             alert.setOnCancelListener { finish() }
             alert.show()
             return
@@ -317,7 +330,10 @@ class DocumentActivity : AppCompatActivity() {
                 requestPassword(savedInstanceState)
             }
         }
-        alert.setButton(AlertDialog.BUTTON_NEGATIVE, getString(R.string.cancel)) { _, _ -> finish() }
+        alert.setButton(
+            AlertDialog.BUTTON_NEGATIVE,
+            getString(R.string.cancel)
+        ) { _, _ -> finish() }
         alert.show()
     }
 
@@ -337,7 +353,8 @@ class DocumentActivity : AppCompatActivity() {
             override fun onMoveToChild(i: Int) {
                 if (core == null) return
 
-                mPageNumberView.text = String.format(Locale.ROOT, "%d / %d", i + 1, core!!.countPages())
+                mPageNumberView.text =
+                    String.format(Locale.ROOT, "%d / %d", i + 1, core!!.countPages())
                 mPageSlider.max = (core!!.countPages() - 1) * mPageSliderRes
                 mPageSlider.progress = i * mPageSliderRes
                 super.onMoveToChild(i)
@@ -407,7 +424,8 @@ class DocumentActivity : AppCompatActivity() {
 
         // Set the file-name text
         val docTitle = core!!.getTitle()
-        if (docTitle.isNullOrBlank()) mDocNameView.text = docTitle else mDocNameView.text = mDocTitle
+        if (docTitle.isNullOrBlank()) mDocNameView.text = docTitle else mDocNameView.text =
+            mDocTitle
 
         // Activate the seekbar
         mPageSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -515,8 +533,7 @@ class DocumentActivity : AppCompatActivity() {
             mOutlineButton.setOnClickListener {
                 if (mFlatOutline == null) {
                     mFlatOutline = core!!.getOutline()
-                }
-                else {
+                } else {
                     val intent = Intent(this@DocumentActivity, OutlineActivity::class.java)
                     val bundle = Bundle()
                     bundle.putInt("POSITION", mDocView.getDisplayedViewIndex())
@@ -553,7 +570,7 @@ class DocumentActivity : AppCompatActivity() {
     }
 
     fun updateStateScrollButton() {
-        if(HORIZONTAL_SCROLLING ) {
+        if (HORIZONTAL_SCROLLING) {
             mScrollButton.setImageResource(R.drawable.ic_scroll_vertical)
         } else {
             mScrollButton.setImageResource(R.drawable.ic_scroll_horizontal)
@@ -617,13 +634,27 @@ class DocumentActivity : AppCompatActivity() {
 
     private fun setButtonEnabled(button: ImageButton, enabled: Boolean) {
         button.isEnabled = enabled
-        button.setColorFilter(if (enabled) Color.argb(255, 255, 255, 255) else Color.argb(255, 128, 128, 128))
+        button.setColorFilter(
+            if (enabled) Color.argb(255, 255, 255, 255) else Color.argb(
+                255,
+                128,
+                128,
+                128
+            )
+        )
     }
 
     private fun setLinkHighlight(highlight: Boolean) {
         mLinkHighlight = highlight
         // LINK_COLOR tint
-        mLinkButton.setColorFilter(if (highlight) Color.argb(0xFF, 0x00, 0x66, 0xCC) else Color.argb(0xFF, 255, 255, 255))
+        mLinkButton.setColorFilter(
+            if (highlight) Color.argb(
+                0xFF,
+                0x00,
+                0x66,
+                0xCC
+            ) else Color.argb(0xFF, 255, 255, 255)
+        )
         // Inform pages of the change.
         mDocView.setLinksEnabled(highlight)
     }
@@ -763,7 +794,7 @@ class DocumentActivity : AppCompatActivity() {
         mDocView.setNightMode(isNightMode)
         core!!.setNightMode(isNightMode)
     }
-    
+
     private fun toggleDrawingMode() {
         Log.d("DocumentActivity", "toggleDrawingMode called, current mode: $mIsDrawingMode")
         mIsDrawingMode = !mIsDrawingMode
@@ -771,34 +802,27 @@ class DocumentActivity : AppCompatActivity() {
 
         val currentPageView = mDocView.getDisplayedView()
         val pageNum = mDocView.getDisplayedViewIndex()
-        if (mIsDrawingMode) {
-            // Vào chế độ vẽ, chỉ hiển thị strokes nếu đã lưu
-            if (currentPageView is PageView) {
-                if (savedDrawingStrokes.containsKey(pageNum)) {
-                    currentPageView.setDrawingStrokes(savedDrawingStrokes[pageNum]!!)
-                } else {
-                    currentPageView.clearDrawing()
-                }
+        if (currentPageView is PageView) {
+            if (savedDrawingStrokes.containsKey(pageNum)) {
+                currentPageView.setDrawingStrokes(savedDrawingStrokes[pageNum]!!)
+            } else {
+                currentPageView.clearDrawing()
+            }
+            if (mIsDrawingMode) {
                 currentPageView.enableDrawingMode(true)
                 initializeDrawingToolbar()
                 mDrawingToolbar?.setPageView(currentPageView)
-            }
-            Log.d("DocumentActivity", "Showing drawing toolbar")
-            showDrawingToolbar()
-        } else {
-            // Thoát chế độ vẽ: nếu KHÔNG click Close thì sẽ clear strokes (không lưu)
-            if (currentPageView is PageView) {
-                // Không lưu lại, clear luôn khi chuyển mode draw
-                if (!savedDrawingStrokes.containsKey(pageNum)) {
-                    currentPageView.clearDrawing()
-                }
+
+                Log.d("DocumentActivity", "Showing drawing toolbar")
+                showDrawingToolbar()
+            } else {
                 currentPageView.enableDrawingMode(false)
+                Log.d("DocumentActivity", "Hiding drawing toolbar")
+                hideDrawingToolbar()
             }
-            Log.d("DocumentActivity", "Hiding drawing toolbar")
-            hideDrawingToolbar()
         }
     }
-    
+
     private fun initializeDrawingToolbar() {
         if (mDrawingToolbar == null) {
             mDrawingToolbar = com.artifex.mupdf.viewer.drawing.DrawingToolbar(this).apply {
@@ -816,16 +840,18 @@ class DocumentActivity : AppCompatActivity() {
             if (mIsDrawingMode) Color.RED else Color.WHITE
         )
     }
-    
+
     private fun showDrawingToolbar() {
         Log.d("DocumentActivity", "showDrawingToolbar called")
         // Initialize drawing toolbar if needed
         initializeDrawingToolbar()
 
         // Show drawing toolbar as a popup
-        val popup = android.widget.PopupWindow(mDrawingToolbar!!,
+        val popup = android.widget.PopupWindow(
+            mDrawingToolbar!!,
             android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
-            android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+        )
 
         popup.isOutsideTouchable = true
         popup.isFocusable = true
@@ -838,7 +864,7 @@ class DocumentActivity : AppCompatActivity() {
         // Store popup reference for later dismissal
         mDrawingToolbar!!.tag = popup
     }
-    
+
     private fun hideDrawingToolbar() {
         // Dismiss popup if exists
         val popup = mDrawingToolbar?.tag as? android.widget.PopupWindow

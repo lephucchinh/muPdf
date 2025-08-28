@@ -122,9 +122,11 @@ class DocumentActivity : AppCompatActivity() {
 
     private fun openBuffer(buffer: ByteArray, magic: String): MuPDFCore? {
         return try {
+            Log.d(APP, "openBuffer: $buffer")
             core = MuPDFCore(buffer, magic)
             core
         } catch (e: Exception) {
+            Log.d(APP, "magic: $magic")
             Log.e(APP, "Error opening document buffer: $e")
             null
         }
@@ -135,6 +137,7 @@ class DocumentActivity : AppCompatActivity() {
             core = MuPDFCore(stm, magic)
             core
         } catch (e: Exception) {
+            Log.d(APP, "magic: $magic")
             Log.e(APP, "Error opening document stream: $e")
             null
         }
@@ -174,6 +177,7 @@ class DocumentActivity : AppCompatActivity() {
 
         return if (buf != null) {
             Log.i(APP, "  Opening document from memory buffer of size ${buf.size}")
+            Log.i(APP, "  mimetype ${mimetype}")
             openBuffer(buf, mimetype!!)
         } else {
             Log.i(APP, "  Opening document from stream")
@@ -214,6 +218,15 @@ class DocumentActivity : AppCompatActivity() {
         alert.show()
     }
 
+    private fun mimeToMagic(mime: String): String {
+        return when (mime) {
+            "application/pdf" -> "pdf"
+            "application/epub+zip" -> "epub"
+            "application/vnd.ms-xpsdocument" -> "xps"
+            else -> "pdf" // fallback
+        }
+    }
+
     /** Called when the activity is first created. */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -241,7 +254,7 @@ class DocumentActivity : AppCompatActivity() {
 
             if (Intent.ACTION_VIEW == intent.action) {
                 val uri = intent.data
-                var mimetype = intent.type
+                var mimetype = intent.type?.let { mimeToMagic(it) }
 
                 if (uri == null) {
                     showCannotOpenDialog("No document uri to open")
@@ -856,9 +869,11 @@ class DocumentActivity : AppCompatActivity() {
             val pdfDocument = android.graphics.pdf.PdfDocument()
             val pageCount = core.countPages()
 
+
             for (pageNum in 0 until pageCount) {
-                val width = 800
-                val height = 1200
+                val size = core.getPageSize(pageNum)  // <-- lấy size thật của trang
+                val width = size.x.toInt()
+                val height = size.y.toInt()
 
                 val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                 val canvas = Canvas(bmp)

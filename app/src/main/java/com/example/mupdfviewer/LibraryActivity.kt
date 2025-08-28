@@ -5,12 +5,15 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.artifex.mupdf.viewer.DocumentActivity
 import com.example.mupdfviewer.databinding.LibraryActivityBinding
+import androidx.core.net.toUri
 
 class LibraryActivity : AppCompatActivity() {
 
@@ -36,9 +39,31 @@ class LibraryActivity : AppCompatActivity() {
                 }
             }
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (Environment.isExternalStorageManager().not()) {
+                requestPermission()
+
+            }
+        }
+
+
 
         binding.openFileButton.setOnClickListener {
             openFileChooser()
+        }
+    }
+
+    private fun requestPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            try {
+                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                intent.data = "package:$packageName".toUri()
+                startActivity(intent)
+            } catch (e: Exception) {
+                // Fallback nếu ROM không hỗ trợ data=package
+                val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                startActivity(intent)
+            }
         }
     }
 

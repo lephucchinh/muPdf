@@ -6,9 +6,12 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.database.Cursor
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.provider.OpenableColumns
 import android.text.Editable
 import android.text.TextWatcher
@@ -36,12 +39,14 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import com.artifex.mupdf.fitz.Cookie
 import com.artifex.mupdf.fitz.SeekableInputStream
 import com.artifex.mupdf.viewer.ReaderView.Companion.HORIZONTAL_SCROLLING
 import com.artifex.mupdf.viewer.drawing.DrawingStroke
 import com.example.mupdfviewer.R
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.launch
+import java.io.File
 import java.io.IOException
 import java.util.Locale
 
@@ -81,6 +86,8 @@ class DocumentActivity : AppCompatActivity() {
     private lateinit var mNightModeButton: ImageButton
 
     private lateinit var mScrollButton: ImageButton
+
+    private lateinit var mDuplicateButton: ImageButton
 
     private lateinit var mCloseDrawButton: FloatingActionButton
     private lateinit var mSearchTask: SearchTask
@@ -450,6 +457,13 @@ class DocumentActivity : AppCompatActivity() {
 
         mScrollButton.setOnClickListener { onUpdateScrollMode() }
 
+        mDuplicateButton.setOnClickListener {
+            val downloads =
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val outputFile = File(downloads, "exported_page.pdf")
+            exportWholeDocumentAsPdf(outputFile)
+        }
+
         mCloseDrawButton.setOnClickListener {
             val currentPageView = mDocView.getDisplayedView()
             if (currentPageView is PageView) {
@@ -779,6 +793,7 @@ class DocumentActivity : AppCompatActivity() {
         mCloseDrawButton = mButtonsView.findViewById(R.id.btClose)
         mDownloadPdfToPNGText = mButtonsView.findViewById(R.id.btDownload)
         mDrawingButton = mButtonsView.findViewById(R.id.btPen)
+        mDuplicateButton = mButtonsView.findViewById(R.id.btDuplicate)
         mTopBarSwitcher.visibility = View.INVISIBLE
         mPageNumberView.visibility = View.INVISIBLE
 
@@ -834,6 +849,70 @@ class DocumentActivity : AppCompatActivity() {
         }
     }
 
+    fun exportWholeDocumentAsPdf(outputFile: File) {
+        val core = core ?: return
+
+        lifecycleScope.launch {
+            val pdfDocument = android.graphics.pdf.PdfDocument()
+            val pageCount = core.countPages()
+
+            for (pageNum in 0 until pageCount) {
+                val width = 800
+                val height = 1200
+
+                val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(bmp)
+                val cookie = Cookie()
+                // Vẽ trang PDF từ core
+                try {
+                    core.drawPage(bmp, pageNum, width, height, 0, 0, width, height, cookie)
+
+// 2. Vẽ các nét vẽ của người dùng nếu có
+                    val strokes = savedDrawingStrokes[pageNum]
+                    if (strokes != null) {
+                        drawStrokesOnCanvas(strokes, canvas)
+                    }
+                } catch (e: Exception) {
+                    Log.e("DocumentActivity", "Error drawing page $pageNum: $e")
+                    continue
+                }
+
+                val pageInfo =
+                    android.graphics.pdf.PdfDocument.PageInfo.Builder(width, height, pageNum + 1)
+                        .create()
+                val pdfPage = pdfDocument.startPage(pageInfo)
+                pdfPage.canvas.drawBitmap(bmp, 0f, 0f, null)
+                pdfDocument.finishPage(pdfPage)
+            }
+
+            outputFile.outputStream().use { pdfDocument.writeTo(it) }
+            pdfDocument.close()
+
+            Log.d("DocumentActivity", "Exported entire document to PDF: ${outputFile.absolutePath}")
+        }
+    }
+
+    fun drawStrokesOnCanvas(strokes: List<DrawingStroke>, canvas: Canvas) {
+        val paint = android.graphics.Paint().apply {
+            isAntiAlias = true
+            style = android.graphics.Paint.Style.STROKE
+        }
+
+        for (stroke in strokes) {
+            paint.color = stroke.color
+            paint.strokeWidth = stroke.strokeWidth.toFloat()
+            val path = android.graphics.Path()
+            val points = stroke.points
+            if (points.isNotEmpty()) {
+                path.moveTo(points[0].x, points[0].y)
+                for (i in 1 until points.size) {
+                    path.lineTo(points[i].x, points[i].y)
+                }
+                canvas.drawPath(path, paint)
+            }
+        }
+    }
+
     private fun updateDrawingButtonState() {
         mCloseDrawButton.isVisible = mIsDrawingMode
         mDrawingButton.setColorFilter(
@@ -873,12 +952,12 @@ class DocumentActivity : AppCompatActivity() {
 
     private fun showKeyboard() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm?.showSoftInput(mSearchText, 0)
+        imm.showSoftInput(mSearchText, 0)
     }
 
     private fun hideKeyboard() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm?.hideSoftInputFromWindow(mSearchText.windowToken, 0)
+        imm.hideSoftInputFromWindow(mSearchText.windowToken, 0)
     }
 
     private fun search(direction: Int) {

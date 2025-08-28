@@ -48,6 +48,16 @@
 				/>
 
 			<ImageButton
+				android:id="@+id/btDuplicate"
+				android:layout_width="24dp"
+				android:layout_height="24dp"
+				android:layout_marginHorizontal="10dp"
+				android:background="@drawable/button"
+				android:layout_gravity="center"
+				android:src="@drawable/ic_mupdf"
+				/>
+
+			<ImageButton
 				android:id="@+id/btScroll"
 				android:layout_width="24dp"
 				android:layout_height="24dp"

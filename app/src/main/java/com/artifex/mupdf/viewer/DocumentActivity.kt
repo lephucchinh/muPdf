@@ -38,6 +38,7 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.artifex.mupdf.fitz.SeekableInputStream
 import com.artifex.mupdf.viewer.ReaderView.Companion.HORIZONTAL_SCROLLING
+import com.artifex.mupdf.viewer.drawing.DrawingStroke
 import com.example.mupdfviewer.R
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.launch
@@ -45,6 +46,9 @@ import java.io.IOException
 import java.util.Locale
 
 class DocumentActivity : AppCompatActivity() {
+
+    // Lưu các nét vẽ đã được lưu trên từng trang
+    private val savedDrawingStrokes = mutableMapOf<Int, List<DrawingStroke>>()
 
     private val APP = "MuPDF-chinh"
 
@@ -428,7 +432,14 @@ class DocumentActivity : AppCompatActivity() {
 
         mScrollButton.setOnClickListener { onUpdateScrollMode() }
 
-        mCloseDrawButton.setOnClickListener {  }
+        mCloseDrawButton.setOnClickListener {
+            val currentPageView = mDocView.getDisplayedView()
+            if (currentPageView is PageView) {
+                val pageNum = mDocView.getDisplayedViewIndex()
+                savedDrawingStrokes[pageNum] = currentPageView.getDrawingStrokes() // Lưu nét vẽ
+            }
+            toggleDrawingMode() // chuyển về chế độ thường
+        }
 
         mDownloadPdfToPNGText.setOnClickListener { shareCurrentPageAsPNG() }
         mDrawingButton.setOnClickListener { toggleDrawingMode() }
@@ -756,11 +767,28 @@ class DocumentActivity : AppCompatActivity() {
         Log.d("DocumentActivity", "toggleDrawingMode called, current mode: $mIsDrawingMode")
         mIsDrawingMode = !mIsDrawingMode
         updateDrawingButtonState()
-        
+
+        val currentPageView = mDocView.getDisplayedView()
         if (mIsDrawingMode) {
+            // Bắt đầu chế độ vẽ
+            if (currentPageView is PageView) {
+                val pageNum = mDocView.getDisplayedViewIndex()
+                if (savedDrawingStrokes.containsKey(pageNum)) {
+                    currentPageView.setDrawingStrokes(savedDrawingStrokes[pageNum]!!)
+                } else {
+                    currentPageView.clearDrawing()
+                }
+                currentPageView.enableDrawingMode(true)
+                initializeDrawingToolbar()
+                mDrawingToolbar?.setPageView(currentPageView)
+            }
             Log.d("DocumentActivity", "Showing drawing toolbar")
             showDrawingToolbar()
         } else {
+            // Thoát chế độ vẽ: không làm gì với nét vẽ, chỉ tắt drawing mode
+            if (currentPageView is PageView) {
+                currentPageView.enableDrawingMode(false)
+            }
             Log.d("DocumentActivity", "Hiding drawing toolbar")
             hideDrawingToolbar()
         }
@@ -788,31 +816,20 @@ class DocumentActivity : AppCompatActivity() {
         Log.d("DocumentActivity", "showDrawingToolbar called")
         // Initialize drawing toolbar if needed
         initializeDrawingToolbar()
-        
+
         // Show drawing toolbar as a popup
-        val popup = android.widget.PopupWindow(mDrawingToolbar!!, 
-            android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 
+        val popup = android.widget.PopupWindow(mDrawingToolbar!!,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
             android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
-        
+
         popup.isOutsideTouchable = true
         popup.isFocusable = true
-        
+
         // Position the popup at the top of the screen
         val location = IntArray(2)
         mDrawingButton.getLocationInWindow(location)
         popup.showAsDropDown(mDrawingButton, 0, 10)
-        
-        // Enable drawing mode on current page
-        val currentPageView = mDocView.getDisplayedView()
-        Log.d("DocumentActivity", "Current page view: ${currentPageView?.javaClass?.simpleName}")
-        if (currentPageView is PageView) {
-            Log.d("DocumentActivity", "Enabling drawing mode on PageView")
-            currentPageView.enableDrawingMode(true)
-            mDrawingToolbar!!.setPageView(currentPageView)
-        } else {
-            Log.e("DocumentActivity", "Current page view is not PageView: ${currentPageView?.javaClass?.simpleName}")
-        }
-        
+
         // Store popup reference for later dismissal
         mDrawingToolbar!!.tag = popup
     }
@@ -821,12 +838,6 @@ class DocumentActivity : AppCompatActivity() {
         // Dismiss popup if exists
         val popup = mDrawingToolbar?.tag as? android.widget.PopupWindow
         popup?.dismiss()
-        
-        // Disable drawing mode on current page
-        val currentPageView = mDocView.getDisplayedView()
-        if (currentPageView is PageView) {
-            currentPageView.enableDrawingMode(false)
-        }
     }
 
     private fun showKeyboard() {

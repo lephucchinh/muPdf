@@ -22,6 +22,7 @@ import android.os.Handler
 import android.os.FileUriExposedException
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -60,6 +61,9 @@ class PageView(
 
         const val NIGHT_HIGHLIGHT_COLOR = Color.CYAN
         const val NIGHT_LINK_COLOR = Color.MAGENTA
+
+        var mIsDrawingMode = false
+
     }
 
     private var mPageNumber: Int = 0
@@ -88,6 +92,9 @@ class PageView(
 
     private var mBusyIndicator: ProgressBar? = null
     private val mHandler = Handler()
+    
+    // Drawing layer
+    private var mDrawingLayer: com.artifex.mupdf.viewer.drawing.DrawingLayer? = null
 
 
     init {
@@ -229,6 +236,13 @@ class PageView(
                 addView(this)
             }
         }
+        
+        // Initialize drawing layer if not already done
+        if (mDrawingLayer == null) {
+            mDrawingLayer = com.artifex.mupdf.viewer.drawing.DrawingLayer(this)
+        }
+        
+        // Initialize drawing layer if not already done
 
         mEntire?.setImageBitmap(null)
         mEntire?.invalidate()
@@ -608,5 +622,82 @@ class PageView(
         } catch (e: RuntimeException) {
             null
         }
+    }
+    
+    // Drawing methods
+    fun enableDrawingMode(enable: Boolean) {
+        Log.d("PageView", "enableDrawingMode: $enable")
+        mIsDrawingMode = enable
+        mDrawingLayer?.isDrawingEnabled = enable
+        Log.d("PageView", "Drawing mode set: $mIsDrawingMode, layer enabled: ${mDrawingLayer?.isDrawingEnabled}")
+    }
+    
+    fun isDrawingModeEnabled(): Boolean = mIsDrawingMode
+    
+    fun setDrawingTool(tool: com.artifex.mupdf.viewer.drawing.DrawingTool) {
+        mDrawingLayer?.setTool(tool)
+    }
+    
+    fun setDrawingColor(color: Int) {
+        mDrawingLayer?.setColor(color)
+    }
+    
+    fun setDrawingStrokeWidth(width: Float) {
+        mDrawingLayer?.setStrokeWidth(width)
+    }
+    
+    fun undoDrawing() = mDrawingLayer?.undo() ?: false
+    
+    fun redoDrawing() = mDrawingLayer?.redo() ?: false
+    
+    fun clearDrawing() {
+        mDrawingLayer?.clear()
+    }
+    
+    fun hasDrawing(): Boolean = mDrawingLayer?.hasStrokes() ?: false
+    
+    fun canUndoDrawing(): Boolean = mDrawingLayer?.canUndo() ?: false
+    
+    fun canRedoDrawing(): Boolean = mDrawingLayer?.canRedo() ?: false
+    
+    fun getDrawingStrokes() = mDrawingLayer?.getStrokes() ?: emptyList()
+    
+    fun setDrawingStrokes(strokes: List<com.artifex.mupdf.viewer.drawing.DrawingStroke>) {
+        mDrawingLayer?.setStrokes(strokes)
+    }
+    
+    fun showDrawing(show: Boolean) {
+        mDrawingLayer?.isVisible = show
+        invalidate()
+    }
+    
+    override fun dispatchDraw(canvas: Canvas) {
+        super.dispatchDraw(canvas)
+
+        // Luôn vẽ drawing layer nếu có stroke (đã lưu hoặc đang vẽ)
+        if (mDrawingLayer != null && mDrawingLayer!!.hasStrokes()) {
+            Log.d("PageView", "Drawing layer on canvas")
+            mDrawingLayer!!.draw(canvas)
+        } else {
+            Log.d("PageView", "Not drawing: layer=${mDrawingLayer != null}")
+        }
+    }
+    
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        Log.d("PageView", "onTouchEvent: action=${event.action}, mode=$mIsDrawingMode")
+        if (mIsDrawingMode && mDrawingLayer?.onTouchEvent(event) == true) {
+            Log.d("PageView", "Drawing handled touch event")
+            return true
+        }
+        return super.onTouchEvent(event)
+    }
+    
+    override fun onInterceptTouchEvent(ev: MotionEvent?): Boolean {
+        Log.d("PageView", "onInterceptTouchEvent: action=${ev?.action}, mode=$mIsDrawingMode")
+        if (mIsDrawingMode && ev != null/* && mDrawingLayer?.onTouchEvent(ev) == true*/) {
+            Log.d("PageView", "Drawing intercepted touch event")
+            return true
+        }
+        return super.onInterceptTouchEvent(ev)
     }
 }

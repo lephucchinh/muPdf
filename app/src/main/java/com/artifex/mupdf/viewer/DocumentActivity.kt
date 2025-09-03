@@ -6,9 +6,12 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.database.Cursor
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.provider.OpenableColumns
 import android.text.Editable
 import android.text.TextWatcher
@@ -17,6 +20,7 @@ import android.util.DisplayMetrics
 import android.util.Log
 import android.view.KeyEvent
 import android.view.Menu
+import android.view.MotionEvent
 import android.view.View
 import android.view.Window
 import android.view.WindowManager
@@ -33,15 +37,23 @@ import android.widget.TextView
 import android.widget.ViewAnimator
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import com.artifex.mupdf.fitz.Cookie
 import com.artifex.mupdf.fitz.SeekableInputStream
 import com.artifex.mupdf.viewer.ReaderView.Companion.HORIZONTAL_SCROLLING
+import com.artifex.mupdf.viewer.drawing.DrawingStroke
 import com.example.mupdfviewer.R
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.launch
+import java.io.File
 import java.io.IOException
 import java.util.Locale
 
 class DocumentActivity : AppCompatActivity() {
+
+    // Lưu các nét vẽ đã được lưu trên từng trang
+    private val savedDrawingStrokes = mutableMapOf<Int, List<DrawingStroke>>()
 
     private val APP = "MuPDF-chinh"
 
@@ -74,11 +86,20 @@ class DocumentActivity : AppCompatActivity() {
     private lateinit var mNightModeButton: ImageButton
 
     private lateinit var mScrollButton: ImageButton
+
+    private lateinit var mDuplicateButton: ImageButton
+
+    private lateinit var mCloseDrawButton: FloatingActionButton
     private lateinit var mSearchTask: SearchTask
     private lateinit var mAlertBuilder: AlertDialog.Builder
     private var mLinkHighlight = false
     private var mFlatOutline: ArrayList<Item>? = null
     private var mReturnToLibraryActivity = false
+
+    // Drawing components
+    private lateinit var mDrawingButton: ImageButton
+    private var mDrawingToolbar: com.artifex.mupdf.viewer.drawing.DrawingToolbar? = null
+    private var mIsDrawingMode = false
 
 
     private var isNightMode = false
@@ -99,21 +120,24 @@ class DocumentActivity : AppCompatActivity() {
         return builder.toString()
     }
 
-    private fun openBuffer(buffer: ByteArray, magic: String): MuPDFCore? {
-        return try {
-            core = MuPDFCore(buffer, magic)
-            core
-        } catch (e: Exception) {
-            Log.e(APP, "Error opening document buffer: $e")
-            null
-        }
-    }
+//    private fun openBuffer(buffer: ByteArray, magic: String): MuPDFCore? {
+//        return try {
+//            Log.d(APP, "openBuffer: $buffer")
+//            core = MuPDFCore(buffer, magic)
+//            core
+//        } catch (e: Exception) {
+//            Log.d(APP, "magic: $magic")
+//            Log.e(APP, "Error opening document buffer: $e")
+//            null
+//        }
+//    }
 
     private fun openStream(stm: SeekableInputStream, magic: String): MuPDFCore? {
         return try {
             core = MuPDFCore(stm, magic)
             core
         } catch (e: Exception) {
+            Log.d(APP, "magic: $magic")
             Log.e(APP, "Error opening document stream: $e")
             null
         }
@@ -151,13 +175,14 @@ class DocumentActivity : AppCompatActivity() {
             isStream?.close()
         }
 
-        return if (buf != null) {
-            Log.i(APP, "  Opening document from memory buffer of size ${buf.size}")
-            openBuffer(buf, mimetype!!)
-        } else {
-            Log.i(APP, "  Opening document from stream")
-            openStream(ContentInputStream(cr, uri, size), mimetype!!)
-        }
+         /*if (buf != null) {*/
+//            Log.i(APP, "  Opening document from memory buffer of size ${buf.size}")
+//            Log.i(APP, "  mimetype ${mimetype}")
+//            openBuffer(buf, mimetype!!)
+//        } else {
+//            Log.i(APP, "  Opening document from stream")
+        return  openStream(ContentInputStream(cr, uri, size), mimetype!!)
+//        }
     }
 
     fun shareCurrentPageAsPNG() {
@@ -179,9 +204,27 @@ class DocumentActivity : AppCompatActivity() {
     private fun showCannotOpenDialog(reason: String) {
         val res = resources
         val alert = mAlertBuilder.create()
-        setTitle(String.format(Locale.ROOT, res.getString(R.string.cannot_open_document_Reason), reason))
-        alert.setButton(AlertDialog.BUTTON_POSITIVE, getString(R.string.dismiss)) { _, _ -> finish() }
+        setTitle(
+            String.format(
+                Locale.ROOT,
+                res.getString(R.string.cannot_open_document_Reason),
+                reason
+            )
+        )
+        alert.setButton(
+            AlertDialog.BUTTON_POSITIVE,
+            getString(R.string.dismiss)
+        ) { _, _ -> finish() }
         alert.show()
+    }
+
+    private fun mimeToMagic(mime: String): String {
+        return when (mime) {
+            "application/pdf" -> "pdf"
+            "application/epub+zip" -> "epub"
+            "application/vnd.ms-xpsdocument" -> "xps"
+            else -> "pdf" // fallback
+        }
     }
 
     /** Called when the activity is first created. */
@@ -206,11 +249,12 @@ class DocumentActivity : AppCompatActivity() {
             val intent = intent
             val file: SeekableInputStream?
 
-            mReturnToLibraryActivity = intent.getIntExtra("$packageName.ReturnToLibraryActivity", 0) != 0
+            mReturnToLibraryActivity =
+                intent.getIntExtra("$packageName.ReturnToLibraryActivity", 0) != 0
 
             if (Intent.ACTION_VIEW == intent.action) {
                 val uri = intent.data
-                var mimetype = intent.type
+                var mimetype = intent.type?.let { mimeToMagic(it) }
 
                 if (uri == null) {
                     showCannotOpenDialog("No document uri to open")
@@ -279,7 +323,10 @@ class DocumentActivity : AppCompatActivity() {
         if (core == null) {
             val alert = mAlertBuilder.create()
             alert.setTitle(R.string.cannot_open_document)
-            alert.setButton(AlertDialog.BUTTON_POSITIVE, getString(R.string.dismiss)) { _, _ -> finish() }
+            alert.setButton(
+                AlertDialog.BUTTON_POSITIVE,
+                getString(R.string.dismiss)
+            ) { _, _ -> finish() }
             alert.setOnCancelListener { finish() }
             alert.show()
             return
@@ -303,7 +350,10 @@ class DocumentActivity : AppCompatActivity() {
                 requestPassword(savedInstanceState)
             }
         }
-        alert.setButton(AlertDialog.BUTTON_NEGATIVE, getString(R.string.cancel)) { _, _ -> finish() }
+        alert.setButton(
+            AlertDialog.BUTTON_NEGATIVE,
+            getString(R.string.cancel)
+        ) { _, _ -> finish() }
         alert.show()
     }
 
@@ -323,7 +373,8 @@ class DocumentActivity : AppCompatActivity() {
             override fun onMoveToChild(i: Int) {
                 if (core == null) return
 
-                mPageNumberView.text = String.format(Locale.ROOT, "%d / %d", i + 1, core!!.countPages())
+                mPageNumberView.text =
+                    String.format(Locale.ROOT, "%d / %d", i + 1, core!!.countPages())
                 mPageSlider.max = (core!!.countPages() - 1) * mPageSliderRes
                 mPageSlider.progress = i * mPageSliderRes
                 super.onMoveToChild(i)
@@ -339,6 +390,22 @@ class DocumentActivity : AppCompatActivity() {
 
             override fun onDocMotion() {
                 hideButtons()
+            }
+
+            override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
+                if (mIsDrawingMode == true) {
+                    // không cho intercept để lật page
+                    return false
+                }
+                return super.onInterceptTouchEvent(ev)
+            }
+
+            override fun onTouchEvent(ev: MotionEvent): Boolean {
+                if (mIsDrawingMode == true) {
+                    // bỏ qua swipe lật trang
+                    return false
+                }
+                return super.onTouchEvent(ev)
             }
 
             override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -377,7 +444,8 @@ class DocumentActivity : AppCompatActivity() {
 
         // Set the file-name text
         val docTitle = core!!.getTitle()
-        if (docTitle.isNullOrBlank()) mDocNameView.text = docTitle else mDocNameView.text = mDocTitle
+        if (docTitle.isNullOrBlank()) mDocNameView.text = docTitle else mDocNameView.text =
+            mDocTitle
 
         // Activate the seekbar
         mPageSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -402,7 +470,25 @@ class DocumentActivity : AppCompatActivity() {
 
         mScrollButton.setOnClickListener { onUpdateScrollMode() }
 
+        mDuplicateButton.setOnClickListener {
+            val downloads =
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val outputFile = File(downloads, "exported_page.pdf")
+            exportWholeDocumentAsPdf(outputFile)
+        }
+
+        mCloseDrawButton.setOnClickListener {
+            val currentPageView = mDocView.getDisplayedView()
+            if (currentPageView is PageView) {
+                val pageNum = mDocView.getDisplayedViewIndex()
+                // NHẤN Close mới thực sự lưu strokes
+                savedDrawingStrokes[pageNum] = currentPageView.getDrawingStrokes() // Lưu nét vẽ
+            }
+            toggleDrawingMode() // chuyển về chế độ thường
+        }
+
         mDownloadPdfToPNGText.setOnClickListener { shareCurrentPageAsPNG() }
+        mDrawingButton.setOnClickListener { toggleDrawingMode() }
 
         // Search invoking buttons are disabled while there is no text specified
         mSearchBack.isEnabled = false
@@ -474,8 +560,7 @@ class DocumentActivity : AppCompatActivity() {
             mOutlineButton.setOnClickListener {
                 if (mFlatOutline == null) {
                     mFlatOutline = core!!.getOutline()
-                }
-                else {
+                } else {
                     val intent = Intent(this@DocumentActivity, OutlineActivity::class.java)
                     val bundle = Bundle()
                     bundle.putInt("POSITION", mDocView.getDisplayedViewIndex())
@@ -512,7 +597,7 @@ class DocumentActivity : AppCompatActivity() {
     }
 
     fun updateStateScrollButton() {
-        if(HORIZONTAL_SCROLLING ) {
+        if (HORIZONTAL_SCROLLING) {
             mScrollButton.setImageResource(R.drawable.ic_scroll_vertical)
         } else {
             mScrollButton.setImageResource(R.drawable.ic_scroll_horizontal)
@@ -576,13 +661,27 @@ class DocumentActivity : AppCompatActivity() {
 
     private fun setButtonEnabled(button: ImageButton, enabled: Boolean) {
         button.isEnabled = enabled
-        button.setColorFilter(if (enabled) Color.argb(255, 255, 255, 255) else Color.argb(255, 128, 128, 128))
+        button.setColorFilter(
+            if (enabled) Color.argb(255, 255, 255, 255) else Color.argb(
+                255,
+                128,
+                128,
+                128
+            )
+        )
     }
 
     private fun setLinkHighlight(highlight: Boolean) {
         mLinkHighlight = highlight
         // LINK_COLOR tint
-        mLinkButton.setColorFilter(if (highlight) Color.argb(0xFF, 0x00, 0x66, 0xCC) else Color.argb(0xFF, 255, 255, 255))
+        mLinkButton.setColorFilter(
+            if (highlight) Color.argb(
+                0xFF,
+                0x00,
+                0x66,
+                0xCC
+            ) else Color.argb(0xFF, 255, 255, 255)
+        )
         // Inform pages of the change.
         mDocView.setLinksEnabled(highlight)
     }
@@ -704,7 +803,10 @@ class DocumentActivity : AppCompatActivity() {
         mLayoutButton = mButtonsView.findViewById(R.id.layoutButton)
         mNightModeButton = mButtonsView.findViewById(R.id.btNightMode)
         mScrollButton = mButtonsView.findViewById(R.id.btScroll)
+        mCloseDrawButton = mButtonsView.findViewById(R.id.btClose)
         mDownloadPdfToPNGText = mButtonsView.findViewById(R.id.btDownload)
+        mDrawingButton = mButtonsView.findViewById(R.id.btPen)
+        mDuplicateButton = mButtonsView.findViewById(R.id.btDuplicate)
         mTopBarSwitcher.visibility = View.INVISIBLE
         mPageNumberView.visibility = View.INVISIBLE
 
@@ -721,14 +823,160 @@ class DocumentActivity : AppCompatActivity() {
         core!!.setNightMode(isNightMode)
     }
 
+    private fun toggleDrawingMode() {
+        Log.d("DocumentActivity", "toggleDrawingMode called, current mode: $mIsDrawingMode")
+        mIsDrawingMode = !mIsDrawingMode
+        updateDrawingButtonState()
+
+        val currentPageView = mDocView.getDisplayedView()
+        val pageNum = mDocView.getDisplayedViewIndex()
+        if (currentPageView is PageView) {
+            if (savedDrawingStrokes.containsKey(pageNum)) {
+                currentPageView.setDrawingStrokes(savedDrawingStrokes[pageNum]!!)
+            } else {
+                currentPageView.clearDrawing()
+            }
+            if (mIsDrawingMode) {
+                currentPageView.enableDrawingMode(true)
+                initializeDrawingToolbar()
+                mDrawingToolbar?.setPageView(currentPageView)
+
+                Log.d("DocumentActivity", "Showing drawing toolbar")
+                showDrawingToolbar()
+            } else {
+                currentPageView.enableDrawingMode(false)
+                Log.d("DocumentActivity", "Hiding drawing toolbar")
+                hideDrawingToolbar()
+            }
+        }
+    }
+
+    private fun initializeDrawingToolbar() {
+        if (mDrawingToolbar == null) {
+            mDrawingToolbar = com.artifex.mupdf.viewer.drawing.DrawingToolbar(this).apply {
+                setOnDrawingModeChangedListener { enabled ->
+                    mIsDrawingMode = enabled
+                    updateDrawingButtonState()
+                }
+            }
+        }
+    }
+
+    fun exportWholeDocumentAsPdf(outputFile: File) {
+        val core = core ?: return
+
+        lifecycleScope.launch {
+            val pdfDocument = android.graphics.pdf.PdfDocument()
+            val pageCount = core.countPages()
+
+
+            for (pageNum in 0 until pageCount) {
+                val size = core.getPageSize(pageNum)  // <-- lấy size thật của trang
+                val width = size.x.toInt()
+                val height = size.y.toInt()
+
+                val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(bmp)
+                val cookie = Cookie()
+                // Vẽ trang PDF từ core
+                try {
+                    core.drawPage(bmp, pageNum, width, height, 0, 0, width, height, cookie)
+
+// 2. Vẽ các nét vẽ của người dùng nếu có
+                    val strokes = savedDrawingStrokes[pageNum]
+                    if (strokes != null) {
+                        drawStrokesOnCanvas(strokes, canvas)
+                    }
+                } catch (e: Exception) {
+                    Log.e("DocumentActivity", "Error drawing page $pageNum: $e")
+                    continue
+                }
+
+                val pageInfo =
+                    android.graphics.pdf.PdfDocument.PageInfo.Builder(width, height, pageNum + 1)
+                        .create()
+                val pdfPage = pdfDocument.startPage(pageInfo)
+                pdfPage.canvas.drawBitmap(bmp, 0f, 0f, null)
+                pdfDocument.finishPage(pdfPage)
+            }
+
+            outputFile.outputStream().use {
+                pdfDocument.writeTo(it)
+//                it.flush()
+//                it.fd.sync() // commit file xuống disk ngay
+            }
+            pdfDocument.close()
+
+            Log.d("DocumentActivity", "Exported entire document to PDF: ${outputFile.absolutePath}")
+        }
+    }
+
+    fun drawStrokesOnCanvas(strokes: List<DrawingStroke>, canvas: Canvas) {
+        val paint = android.graphics.Paint().apply {
+            isAntiAlias = true
+            style = android.graphics.Paint.Style.STROKE
+        }
+
+        for (stroke in strokes) {
+            paint.color = stroke.color
+            paint.strokeWidth = stroke.strokeWidth.toFloat()
+            val path = android.graphics.Path()
+            val points = stroke.points
+            if (points.isNotEmpty()) {
+                path.moveTo(points[0].x, points[0].y)
+                for (i in 1 until points.size) {
+                    path.lineTo(points[i].x, points[i].y)
+                }
+                canvas.drawPath(path, paint)
+            }
+        }
+    }
+
+    private fun updateDrawingButtonState() {
+        mCloseDrawButton.isVisible = mIsDrawingMode
+        mDrawingButton.setColorFilter(
+            if (mIsDrawingMode) Color.RED else Color.WHITE
+        )
+    }
+
+    private fun showDrawingToolbar() {
+        Log.d("DocumentActivity", "showDrawingToolbar called")
+        // Initialize drawing toolbar if needed
+        initializeDrawingToolbar()
+
+        // Show drawing toolbar as a popup
+        val popup = android.widget.PopupWindow(
+            mDrawingToolbar!!,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+
+        popup.isOutsideTouchable = true
+        popup.isFocusable = true
+
+        // Position the popup at the top of the screen
+        val location = IntArray(2)
+        mDrawingButton.getLocationInWindow(location)
+        popup.showAsDropDown(mDrawingButton, 0, 10)
+
+        // Store popup reference for later dismissal
+        mDrawingToolbar!!.tag = popup
+    }
+
+    private fun hideDrawingToolbar() {
+        // Dismiss popup if exists
+        val popup = mDrawingToolbar?.tag as? android.widget.PopupWindow
+        popup?.dismiss()
+    }
+
     private fun showKeyboard() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm?.showSoftInput(mSearchText, 0)
+        imm.showSoftInput(mSearchText, 0)
     }
 
     private fun hideKeyboard() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm?.hideSoftInputFromWindow(mSearchText.windowToken, 0)
+        imm.hideSoftInputFromWindow(mSearchText.windowToken, 0)
     }
 
     private fun search(direction: Int) {

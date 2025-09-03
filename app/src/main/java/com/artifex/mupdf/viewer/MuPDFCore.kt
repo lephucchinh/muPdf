@@ -432,7 +432,8 @@ class MuPDFCore private constructor(private var doc: Document?) {
                 }
 
                 val resolver = context.contentResolver
-                val collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+                val collection =
+                    MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
                 val itemUri = resolver.insert(collection, contentValues)
 
                 itemUri?.let { uri ->
@@ -444,11 +445,13 @@ class MuPDFCore private constructor(private var doc: Document?) {
                     contentValues.clear()
                     contentValues.put(MediaStore.Downloads.IS_PENDING, 0)
                     resolver.update(itemUri, contentValues, null, null)
-                    Toast.makeText(context, "Saved to Downloads: $filename", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Saved to Downloads: $filename", Toast.LENGTH_SHORT)
+                        .show()
                 }
             } else {
                 // Android 9 and below
-                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                val downloadsDir =
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
                 if (!downloadsDir.exists()) downloadsDir.mkdirs()
                 val destFile = File(downloadsDir, filename)
                 file.copyTo(destFile, overwrite = true)
@@ -463,38 +466,41 @@ class MuPDFCore private constructor(private var doc: Document?) {
 
         } catch (e: Exception) {
             Log.e("PDFToPNGConverter", "Error saving PNG: ${e.message}", e)
-            Toast.makeText(App.instance, "Error saving file: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(App.instance, "Error saving file: ${e.message}", Toast.LENGTH_SHORT)
+                .show()
         }
     }
 
     // Function to save to Downloads folder
-    suspend fun saveToDownloads(file: File, fileName: String? = null): File? = withContext(Dispatchers.IO) {
-        try {
-            // Get Downloads directory
-            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            if (!downloadsDir.exists()) {
-                downloadsDir.mkdirs()
+    suspend fun saveToDownloads(file: File, fileName: String? = null): File? =
+        withContext(Dispatchers.IO) {
+            try {
+                // Get Downloads directory
+                val downloadsDir =
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                if (!downloadsDir.exists()) {
+                    downloadsDir.mkdirs()
+                }
+
+                val finalFileName = fileName ?: file.name
+                val downloadFile = File(downloadsDir, finalFileName)
+
+                // Copy file to Downloads
+                file.copyTo(downloadFile, overwrite = true)
+
+                // Notify media scanner
+                val intent = Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
+                intent.data = Uri.fromFile(downloadFile)
+                App.instance.sendBroadcast(intent)
+
+                Log.d("PDFToPNGConverter", "File saved to Downloads: ${downloadFile.absolutePath}")
+                return@withContext downloadFile
+
+            } catch (e: Exception) {
+                Log.e("PDFToPNGConverter", "Error saving to Downloads: ${e.message}", e)
+                return@withContext null
             }
-
-            val finalFileName = fileName ?: file.name
-            val downloadFile = File(downloadsDir, finalFileName)
-
-            // Copy file to Downloads
-            file.copyTo(downloadFile, overwrite = true)
-
-            // Notify media scanner
-            val intent = Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
-            intent.data = Uri.fromFile(downloadFile)
-            App.instance.sendBroadcast(intent)
-
-            Log.d("PDFToPNGConverter", "File saved to Downloads: ${downloadFile.absolutePath}")
-            return@withContext downloadFile
-
-        } catch (e: Exception) {
-            Log.e("PDFToPNGConverter", "Error saving to Downloads: ${e.message}", e)
-            return@withContext null
         }
-    }
 
     // Function to get all PNG files in cache
     fun getCachedPNGFiles(): List<File> {
@@ -519,4 +525,3 @@ class MuPDFCore private constructor(private var doc: Document?) {
         }
     }
 }
-

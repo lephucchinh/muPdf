@@ -120,17 +120,17 @@ class DocumentActivity : AppCompatActivity() {
         return builder.toString()
     }
 
-    private fun openBuffer(buffer: ByteArray, magic: String): MuPDFCore? {
-        return try {
-            Log.d(APP, "openBuffer: $buffer")
-            core = MuPDFCore(buffer, magic)
-            core
-        } catch (e: Exception) {
-            Log.d(APP, "magic: $magic")
-            Log.e(APP, "Error opening document buffer: $e")
-            null
-        }
-    }
+//    private fun openBuffer(buffer: ByteArray, magic: String): MuPDFCore? {
+//        return try {
+//            Log.d(APP, "openBuffer: $buffer")
+//            core = MuPDFCore(buffer, magic)
+//            core
+//        } catch (e: Exception) {
+//            Log.d(APP, "magic: $magic")
+//            Log.e(APP, "Error opening document buffer: $e")
+//            null
+//        }
+//    }
 
     private fun openStream(stm: SeekableInputStream, magic: String): MuPDFCore? {
         return try {
@@ -175,14 +175,14 @@ class DocumentActivity : AppCompatActivity() {
             isStream?.close()
         }
 
-        return if (buf != null) {
-            Log.i(APP, "  Opening document from memory buffer of size ${buf.size}")
-            Log.i(APP, "  mimetype ${mimetype}")
-            openBuffer(buf, mimetype!!)
-        } else {
-            Log.i(APP, "  Opening document from stream")
-            openStream(ContentInputStream(cr, uri, size), mimetype!!)
-        }
+         /*if (buf != null) {*/
+//            Log.i(APP, "  Opening document from memory buffer of size ${buf.size}")
+//            Log.i(APP, "  mimetype ${mimetype}")
+//            openBuffer(buf, mimetype!!)
+//        } else {
+//            Log.i(APP, "  Opening document from stream")
+        return  openStream(ContentInputStream(cr, uri, size), mimetype!!)
+//        }
     }
 
     fun shareCurrentPageAsPNG() {
@@ -900,7 +900,11 @@ class DocumentActivity : AppCompatActivity() {
                 pdfDocument.finishPage(pdfPage)
             }
 
-            outputFile.outputStream().use { pdfDocument.writeTo(it) }
+            outputFile.outputStream().use {
+                pdfDocument.writeTo(it)
+//                it.flush()
+//                it.fd.sync() // commit file xuống disk ngay
+            }
             pdfDocument.close()
 
             Log.d("DocumentActivity", "Exported entire document to PDF: ${outputFile.absolutePath}")

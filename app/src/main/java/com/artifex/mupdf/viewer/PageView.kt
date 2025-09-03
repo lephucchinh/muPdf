@@ -34,6 +34,7 @@ import android.widget.Toast
 import com.artifex.mupdf.fitz.Cookie
 import com.artifex.mupdf.fitz.Link
 import com.artifex.mupdf.fitz.Quad
+import com.artifex.mupdf.viewer.drawing.DrawingLayer
 import com.example.mupdfviewer.R
 import kotlinx.coroutines.*
 import java.util.*
@@ -670,25 +671,42 @@ class PageView(
         mDrawingLayer?.isVisible = show
         invalidate()
     }
-    
+
     override fun dispatchDraw(canvas: Canvas) {
         super.dispatchDraw(canvas)
 
-        // Luôn vẽ drawing layer nếu có stroke (đã lưu hoặc đang vẽ)
-        if (mDrawingLayer != null && mDrawingLayer!!.hasStrokes()) {
-            Log.d("PageView", "Drawing layer on canvas")
-            mDrawingLayer!!.draw(canvas)
-        } else {
-            Log.d("PageView", "Not drawing: layer=${mDrawingLayer != null}")
+        mDrawingLayer?.let { layer ->
+            if (!layer.hasStrokes()) return
+
+            // Tính scale từ page -> view
+            val scale = mSourceScale * width.toFloat() / mSize!!.x.toFloat()
+            canvas.save()
+            canvas.scale(scale, scale)  // Scale stroke đúng theo page
+            layer.draw(canvas)
+            canvas.restore()
         }
     }
-    
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        Log.d("PageView", "onTouchEvent: action=${event.action}, mode=$mIsDrawingMode")
-        if (mIsDrawingMode && mDrawingLayer?.onTouchEvent(event) == true) {
-            Log.d("PageView", "Drawing handled touch event")
-            return true
-        }
+        if (!mIsDrawingMode || mDrawingLayer == null) return super.onTouchEvent(event)
+
+        // Tính scale từ page coordinate -> view coordinate
+        val scale = mSourceScale * width.toFloat() / mSize!!.x.toFloat()
+
+        // Chuyển touch sang page coordinates
+        val transformedEvent = MotionEvent.obtain(
+            event.downTime,
+            event.eventTime,
+            event.action,
+            event.x / scale,
+            event.y / scale,
+            event.metaState
+        )
+
+        val handled = mDrawingLayer!!.onTouchEvent(transformedEvent)
+        transformedEvent.recycle()
+
+        if (handled) return true
         return super.onTouchEvent(event)
     }
     

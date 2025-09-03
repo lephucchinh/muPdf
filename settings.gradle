@@ -11,8 +11,11 @@ pluginManagement {
         gradlePluginPortal()
         //maven { url 'https://maven.ghostscript.com/' }
         maven { url "file://${System.properties['user.home']}/MAVEN" }
+
+        maven { url 'https://jitpack.io' }
     }
 }
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
@@ -21,6 +24,7 @@ dependencyResolutionManagement {
         //maven { url 'https://maven.ghostscript.com/' }
         maven { url "file://${System.properties['user.home']}/MAVEN" }
         maven { url 'https://maven.ghostscript.com' }
+        maven { url 'https://jitpack.io' }
 
     }
 }

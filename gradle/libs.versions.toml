@@ -11,9 +11,17 @@ lifecycleRuntimeKtx = "2.8.0"
 activityCompose = "1.9.0"
 composeBom = "2023.08.00"
 material = "1.12.0"
+poiVersion = "3.17"
+proguard = "3.17"
 uiToolingPreview = "1.6.7"
 viewer = "1.24.0a"
 appcompat = "1.6.1"
+
+# Apache POI versions
+poi = "5.2.5"
+xmlbeans = "5.1.1"
+commonsCompress = "1.24.0"
+aaltoXml = "1.3.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -33,9 +41,19 @@ androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutinesAndroid" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
+poi = { module = "com.github.SUPERCILEX.poi-android:poi", version.ref = "poiVersion" }
+proguard = { module = "com.github.SUPERCILEX.poi-android:proguard", version.ref = "proguard" }
 ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "uiToolingPreview" }
 viewer = { module = "com.artifex.mupdf:viewer", version.ref = "viewer" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+
+# Apache POI libraries
+apache-poi = { group = "org.apache.poi", name = "poi", version.ref = "poi" }
+apache-poi-ooxml = { group = "org.apache.poi", name = "poi-ooxml", version.ref = "poi" }
+apache-poi-ooxml-lite = { group = "org.apache.poi", name = "poi-ooxml-lite", version.ref = "poi" }
+apache-xmlbeans = { group = "org.apache.xmlbeans", name = "xmlbeans", version.ref = "xmlbeans" }
+apache-commons-compress = { group = "org.apache.commons", name = "commons-compress", version.ref = "commonsCompress" }
+aalto-xml = { group = "com.fasterxml", name = "aalto-xml", version.ref = "aaltoXml" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

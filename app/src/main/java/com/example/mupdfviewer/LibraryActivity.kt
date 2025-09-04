@@ -14,31 +14,77 @@ import androidx.appcompat.app.AppCompatActivity
 import com.artifex.mupdf.viewer.DocumentActivity
 import com.example.mupdfviewer.databinding.LibraryActivityBinding
 import androidx.core.net.toUri
+import com.words.WordViewerActivity
 
 class LibraryActivity : AppCompatActivity() {
 
     private lateinit var binding: LibraryActivityBinding
 
     // Launcher cho ACTION_OPEN_DOCUMENT
-    private lateinit var openDocumentLauncher: ActivityResultLauncher<Intent>
+    private var openDocumentLauncher: ActivityResultLauncher<Intent> = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val data = result.data
+            val uri: Uri? = data?.data
+            uri?.let { selectedUri ->
+                try {
+                    // Giữ quyền truy cập lâu dài
+                    val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    contentResolver.takePersistableUriPermission(selectedUri, takeFlags)
+
+                    // Lấy MIME type
+                    val type = contentResolver.getType(selectedUri) ?: "*/*"
+
+                    when (type) {
+                        "application/pdf" -> {
+                            // Mở PDF bằng MuPDF
+                            val intent = Intent(this, DocumentActivity::class.java).apply {
+                                action = Intent.ACTION_VIEW
+                                setDataAndType(selectedUri, type)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                putExtra("$packageName.ReturnToLibraryActivity", 1)
+                            }
+                            startActivity(intent)
+                        }
+
+                        "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.ms-word.document.macroEnabled.12" // .docm
+                            -> {
+                            val intent = Intent(this, WordViewerActivity::class.java).apply {
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                putExtra("file_path", selectedUri.toString())
+                            }
+                            startActivity(intent)
+                        } // .docx
+                        "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" -> {
+
+                        } // .xlsx
+                        "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation" -> {
+//                            // Mở Word/Excel/PowerPoint bằng app mặc định
+//                            val intent = Intent(Intent.ACTION_VIEW).apply {
+//                                setDataAndType(selectedUri, type)
+//                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+//                            }
+//                            startActivity(intent)
+                        }
+
+                        else -> {
+                            Log.e("LibraryActivity", "Định dạng file không được hỗ trợ: $type")
+                        }
+                    }
+
+                } catch (e: Exception) {
+                    Log.e("LibraryActivity", "Không mở được file: ${e.message}", e)
+                }
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = LibraryActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Khởi tạo launcher
-        openDocumentLauncher = registerForActivityResult(
-            ActivityResultContracts.StartActivityForResult()
-        ) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                val data = result.data
-                val uri: Uri? = data?.data
-                uri?.let {
-                    handleOpenDocument(it)
-                }
-            }
-        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (Environment.isExternalStorageManager().not()) {
                 requestPermission()
@@ -70,21 +116,31 @@ class LibraryActivity : AppCompatActivity() {
     private fun openFileChooser() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            type = "application/pdf"
-            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/pdf"))
+            type = "*/*" // Cho phép tất cả loại file
+            putExtra(
+                Intent.EXTRA_MIME_TYPES, arrayOf(
+                    "application/pdf",                    // PDF
+                    "application/msword",                 // Word .doc
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // Word .docx
+                    "application/vnd.ms-excel",           // Excel .xls
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // Excel .xlsx
+                    "application/vnd.ms-powerpoint",      // PowerPoint .ppt
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation" // PowerPoint .pptx
+                )
+            )
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
         }
         openDocumentLauncher.launch(intent)
     }
 
+
     private fun handleOpenDocument(uri: Uri) {
         try {
-            // Giữ quyền truy cập lâu dài
             val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
             contentResolver.takePersistableUriPermission(uri, takeFlags)
 
-            val type = contentResolver.getType(uri) ?: "application/pdf"
+            val type = contentResolver.getType(uri) ?: "*/*"
 
             val intent = Intent(this, DocumentActivity::class.java).apply {
                 action = Intent.ACTION_VIEW

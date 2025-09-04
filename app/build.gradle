@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId "com.example.mupdfviewer"
-        minSdk 24
+        minSdk 26
         targetSdk 34
         versionCode 1
         versionName "1.0"
@@ -44,6 +44,14 @@ android {
     packaging {
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
+            pickFirsts += ['license/README.dom.txt']
+            pickFirsts += ['META-INF/DEPENDENCIES']
+            pickFirsts += ['META-INF/LICENSE.md']
+            pickFirsts += ['license/LICENSE.dom-documentation.txt']
+            pickFirsts += ['META-INF/NOTICE.md']
+            pickFirsts += ['license/NOTICE']
+            pickFirsts += ['license/LICENSE.dom-software.txt']
+            pickFirsts += ['license/LICENSE']
         }
     }
 }
@@ -75,4 +83,28 @@ dependencies {
     androidTestImplementation libs.androidx.ui.test.junit4
     debugImplementation libs.androidx.ui.tooling
     debugImplementation libs.androidx.ui.test.manifest
+
+    implementation('org.docx4j:docx4j-core:11.5.4') {
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
+    implementation('org.docx4j:docx4j-export-fo:11.5.4') {
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
+
+// SLF4J bridge
+    implementation 'org.slf4j:jcl-over-slf4j:2.0.13'
+
+// Chỉ giữ batik-all, không import các module Batik riêng
+
+    implementation 'org.apache.avalon.framework:avalon-framework-api:4.3.1'
+    implementation 'org.apache.avalon.framework:avalon-framework-impl:4.3.1'
+
+// JAXB cho Android
+    implementation 'javax.xml.bind:jaxb-api:2.3.1'
+    implementation 'com.sun.xml.bind:jaxb-core:4.0.5'
+    implementation 'com.sun.xml.bind:jaxb-impl:4.0.5'
+
+// Nếu muốn SLF4J logging
+
+
 }

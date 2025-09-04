@@ -50,10 +50,6 @@ class LibraryActivity : AppCompatActivity() {
         }
 
 
-    // Hàm helper hiển thị danh sách text ra TextView
-    private fun showTextInView(lines: List<String>) {
-        findViewById<TextView>(R.id.textView).text = lines.joinToString("\n\n")
-    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = LibraryActivityBinding.inflate(layoutInflater)
@@ -91,13 +87,20 @@ class LibraryActivity : AppCompatActivity() {
     private fun openFileChooser() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-//            type = "application/pdf"
-            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/pdf"))
+            type = "*/*"
+            putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
         }
         openDocumentLauncher.launch(intent)
     }
+
+    val mimeTypes = arrayOf(
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // docx
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",       // xlsx
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation" // pptx
+    )
 
     private fun handleOpenDocument(uri: Uri) {
         try {

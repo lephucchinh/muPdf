@@ -1,5 +1,6 @@
 package com.apacherpoi
 
+import android.app.AlertDialog
 import android.content.Context
 import android.net.Uri
 import android.util.Log
@@ -12,24 +13,24 @@ import java.io.InputStream
 
 class POIHelper {
 
-    fun readFileFromUri(context: Context, uri: Uri, block: (InputStream) -> Unit) {
-        try {
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                block(inputStream)
-            }
+    fun readFileFromUri(context: Context, uri: Uri): InputStream? {
+        return try {
+            context.contentResolver.openInputStream(uri)
         } catch (e: Exception) {
             e.printStackTrace()
+            null
         }
     }
 
-    fun readExcelAndShow(uri: Uri, context: Context, textView: TextView) {
-        readFileFromUri(context, uri) { inputStream ->
+
+    fun readExcelAndShow(uri: Uri, context: Context) {
+        readFileFromUri(context, uri)?.use { inputStream ->
             XSSFWorkbook(inputStream).use { workbook ->
                 val sheet = workbook.getSheetAt(0)
                 val sb = StringBuilder()
                 for (row in sheet) {
                     val rowText = row.joinToString("\t") { cell ->
-                        when (cell.cellTypeEnum) {
+                        when (cell.cellType) {
                             CellType.STRING -> cell.stringCellValue
                             CellType.NUMERIC -> cell.numericCellValue.toString()
                             CellType.BOOLEAN -> cell.booleanCellValue.toString()
@@ -38,34 +39,31 @@ class POIHelper {
                     }
                     sb.append(rowText).append("\n")
                 }
-                textView.text = sb.toString()
             }
         }
     }
 
 
-    fun readWordAndShow(uri: Uri, context: Context, textView: TextView) {
-        readFileFromUri(context, uri) { inputStream ->
+    fun readWordAndShow(uri: Uri, context: Context) {
+        readFileFromUri(context, uri)?.use { inputStream ->
             XWPFDocument(inputStream).use { doc ->
                 val allText = doc.paragraphs.joinToString("\n") { it.text }
-                textView.text = allText
             }
         }
     }
 
 
-    fun readPowerPointAndShow(uri: Uri, context: Context, textView: TextView) {
-        readFileFromUri(context, uri) { inputStream ->
+
+    fun readPowerPointAndShow(uri: Uri, context: Context) {
+        readFileFromUri(context, uri)?.use { inputStream ->
             XMLSlideShow(inputStream).use { ppt ->
                 val sb = StringBuilder()
                 ppt.slides.forEachIndexed { index, slide ->
-                    slide.shapes.forEach { shape ->
-                        if (shape is org.apache.poi.xslf.usermodel.XSLFTextShape) {
-                            sb.append("Slide $index: ${shape.text}\n")
+                    slide.shapes.filterIsInstance<org.apache.poi.xslf.usermodel.XSLFTextShape>()
+                        .forEach { textShape ->
+                            sb.append("Slide $index: ${textShape.text}\n")
                         }
-                    }
                 }
-                textView.text = sb.toString()
             }
         }
     }

@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId "com.example.mupdfviewer"
-        minSdk 24
+        minSdk 26
         targetSdk 34
         versionCode 1
         versionName "1.0"
@@ -44,7 +44,22 @@ android {
     packaging {
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
+            excludes += '/META-INF/DEPENDENCIES'
+            excludes += '/META-INF/LICENSE'
+            excludes += '/META-INF/LICENSE.md'
+            excludes += '/META-INF/LICENSE.txt'
+            excludes += '/META-INF/NOTICE'
+            excludes += '/META-INF/NOTICE.md'
+            excludes += '/META-INF/NOTICE.txt'
+            excludes += '/META-INF/versions/9/OSGI-INF/MANIFEST.MF'
+            excludes += '/META-INF/ASL2.0'
+            excludes += '/META-INF/*.SF'
+            excludes += '/META-INF/*.DSA'
+            excludes += '/META-INF/*.RSA'
         }
+    }
+    configurations.configureEach {
+        exclude group: 'commons-logging', module: 'commons-logging'
     }
 }
 
@@ -77,8 +92,10 @@ dependencies {
     debugImplementation libs.androidx.ui.test.manifest
 
     // Core POI
-    implementation libs.poi
-    implementation libs.proguard
+    implementation(platform("org.apache.tika:tika-bom:3.2.2"))
+
+    // version not required since bom (platform in Gradle terms)
+    implementation("org.apache.tika:tika-parsers-standard-package")
 
     // XLSX, DOCX, PPTX
 //    implementation 'com.github.SUPERCILEX.poi-android:poi-ooxml-lite:3.17'

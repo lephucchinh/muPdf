@@ -1,17 +1,18 @@
 package com.apacherpoi
 
-import android.app.AlertDialog
 import android.content.Context
 import android.net.Uri
-import android.util.Log
-import android.widget.TextView
 import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.xslf.usermodel.XMLSlideShow
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.apache.poi.xwpf.usermodel.XWPFDocument
+import org.apache.tika.parser.AutoDetectParser
+import org.apache.tika.parser.ParseContext
+import org.apache.tika.sax.ToHTMLContentHandler
+import org.apache.tika.metadata.Metadata
 import java.io.InputStream
 
-class POIHelper {
+class TikaHelper {
 
     fun readFileFromUri(context: Context, uri: Uri): InputStream? {
         return try {
@@ -43,13 +44,38 @@ class POIHelper {
         }
     }
 
-
     fun readWordAndShow(uri: Uri, context: Context) {
         readFileFromUri(context, uri)?.use { inputStream ->
             XWPFDocument(inputStream).use { doc ->
                 val allText = doc.paragraphs.joinToString("\n") { it.text }
             }
         }
+    }
+
+    fun parseWordToHtmlWithImages(context: Context, uri: Uri): String {
+        readFileFromUri(context, uri)?.use { inputStream ->
+            val doc = XWPFDocument(inputStream)
+            val sb = StringBuilder()
+
+            for (paragraph in doc.paragraphs) {
+                sb.append("<p>")
+                for (run in paragraph.runs) {
+                    // text
+                    run.text()?.let { sb.append(it) }
+
+                    // hình ảnh nhúng
+                    run.embeddedPictures.forEach { pic ->
+                        val base64 = android.util.Base64.encodeToString(pic.pictureData.data, android.util.Base64.DEFAULT)
+                        val ext = pic.pictureData.suggestFileExtension() ?: "png"
+                        sb.append("<img src='data:image/$ext;base64,$base64' />")
+                    }
+                }
+                sb.append("</p>")
+            }
+
+            return "<html><body>$sb</body></html>"
+        }
+        return "<html><body><p>Không đọc được file</p></body></html>"
     }
 
 

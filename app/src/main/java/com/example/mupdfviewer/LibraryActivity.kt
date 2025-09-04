@@ -15,7 +15,8 @@ import androidx.appcompat.app.AppCompatActivity
 import com.artifex.mupdf.viewer.DocumentActivity
 import com.example.mupdfviewer.databinding.LibraryActivityBinding
 import androidx.core.net.toUri
-import com.apacherpoi.POIHelper
+import com.apacherpoi.TikaHelper
+import com.apacherpoi.word.WordViewerActivity
 
 class LibraryActivity : AppCompatActivity() {
 
@@ -33,21 +34,28 @@ class LibraryActivity : AppCompatActivity() {
                         "application/pdf" -> handleOpenDocument(fileUri)
                         "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> {
                             // đọc Word
-                            POIHelper().readWordAndShow(fileUri, this)
+                            openWordViewerActivity(fileUri)
                         }
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" -> {
                             // đọc Excel
-                            POIHelper().readExcelAndShow(fileUri, this)
+                            TikaHelper().readExcelAndShow(fileUri, this)
                         }
                         "application/vnd.openxmlformats-officedocument.presentationml.presentation" -> {
                             // đọc PPT
-                            POIHelper().readPowerPointAndShow(fileUri, this)
+                            TikaHelper().readPowerPointAndShow(fileUri, this)
                         }
                         else -> Toast.makeText(this, "Định dạng không hỗ trợ", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
         }
+
+    private fun openWordViewerActivity(fileUri : Uri) {
+        val intent = Intent(this, WordViewerActivity::class.java).apply {
+            data = fileUri
+        }
+        startActivity(intent)
+    }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
